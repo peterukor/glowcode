@@ -5,8 +5,8 @@ const helloWalkthrough: Walkthrough = {
   id: "py-hello-program",
   title: "Your first program",
   language: "python",
-  // No variables or decisions here: the walkthrough shows just the code and the printed output.
-  visualizations: [],
+  // No variables or decisions here: the diagram shows each print() call and what it prints.
+  visualizations: ["function"],
   code: `print("Hello!")
 print("I am a Python program.")`,
   steps: [
@@ -14,12 +14,14 @@ print("I am a Python program.")`,
       line: 1,
       vars: {},
       output: ["Hello!"],
-      note: "Python starts at the top. Line 1 asks print() to show the text Hello! on the screen.",
+      call: { name: "print", args: ['"Hello!"'], prints: ["Hello!"], phase: "result" },
+      note: "Python starts at the top. Line 1 gives the string \"Hello!\" to print(), which shows Hello! on the screen.",
     },
     {
       line: 2,
       vars: {},
       output: ["Hello!", "I am a Python program."],
+      call: { name: "print", args: ['"I am a Python program."'], prints: ["I am a Python program."], phase: "result" },
       note: "Line 1 is finished, so Python moves to line 2 and prints the second message under the first.",
     },
   ],
@@ -193,6 +195,7 @@ print("Put on your socks")`,
           errorOutput: `Traceback (most recent call last):
   File "main.py", line 1, in <module>
     Print("Hello!")
+    ^^^^^
 NameError: name 'Print' is not defined. Did you mean: 'print'?`,
           choices: [
             { id: "case", text: "`Print` should be lowercase: `print`" },

@@ -43,14 +43,34 @@ print(age)`,
     {
       line: 3,
       vars: { age: int(13) },
-      evaluation: ["age + 1", "13 + 1", "14"],
+      calc: { target: "age", parts: [{ code: "age", value: "13" }, { code: "+" }, { code: "1" }], result: "14", phase: "calculate" },
       output: ["13"],
       note: "Line 3, right side first. Python looks up age (still 13) and adds 1. The result is a new value, 14. age hasn't changed yet.",
+      checkpoint: {
+        prompt: "Line 3 is `age = age + 1`. What does Python do **first**?",
+        choices: [
+          { id: "calculate", text: "Works out `age + 1`, using the value `age` refers to now" },
+          {
+            id: "store",
+            text: "Makes `age` refer to 14 straight away",
+            feedback: "That's where line 3 ends up, but Python can't store a value it hasn't worked out yet. What has to happen first?",
+          },
+          {
+            id: "compare",
+            text: "Checks whether `age` is equal to `age + 1`",
+            feedback: "In Python, `=` isn't a question about equality. It's an instruction: work out the right side, then store the result.",
+          },
+        ],
+        answer: "calculate",
+        explanation:
+          "Right side first. Python looks up `age` (13) and works out 13 + 1. Only after that does `age` refer to the result, 14. Watch for that in the next step.",
+      },
     },
     {
       line: 3,
       vars: { age: int(14) },
       highlight: "age",
+      calc: { target: "age", parts: [{ code: "age", value: "13" }, { code: "+" }, { code: "1" }], result: "14", phase: "assign" },
       output: ["13"],
       note: "Now the assignment: the name age moves to the new value, 14. Same line, second step.",
     },
@@ -195,7 +215,7 @@ print(age)`,
           code: birthdayWalkthrough.code,
           output: ["13", "14"],
           highlightLines: [3],
-          caption: "Walk through this one. Line 3 happens in two steps.",
+          caption: "Walk through this one. It stops before line 3 and asks you to predict what Python does.",
           walkthrough: birthdayWalkthrough,
         },
         {
@@ -206,6 +226,13 @@ print(age)`,
           type: "figure",
           caption: "After line 3, `age` refers to 14. Nothing refers to 13 any more, so Python can throw it away.",
           figure: { kind: "names", bindings: [{ name: "age", value: int(14), previous: int(13) }] },
+        },
+        {
+          type: "reflect",
+          id: "reflect-earlier-print",
+          prompt: "Line 2 printed `13`. After line 3, `age` refers to 14. Why doesn't the `13` already on the screen change to `14`?",
+          answer:
+            "`print()` shows the value at the moment its line runs. When line 2 ran, `age` referred to 13, so 13 went on the screen, and that's finished. Line 3 changes what `age` refers to from then on. It doesn't go back and redo earlier lines. To see the new value, the program has to print again, which is what line 4 does.",
         },
         {
           type: "callout",
@@ -242,6 +269,7 @@ print(Age)`,
           errorOutput: `Traceback (most recent call last):
   File "main.py", line 2, in <module>
     print(Age)
+          ^^^
 NameError: name 'Age' is not defined. Did you mean: 'age'?`,
           choices: [
             { id: "case", text: "Names are case-sensitive: `Age` and `age` are different names" },
@@ -287,32 +315,33 @@ score = 10`,
           id: "predict-score",
           variant: "predict",
           prompt: "What does this program print?",
-          code: `score = 10
-score = score + 5
-print(score)`,
+          code: `score = 5
+best = score
+score = score + 1
+print(best)`,
           choices: [
+            { id: "5", text: "`5`" },
             {
-              id: "10",
-              text: "`10`",
-              feedback: "That was the value before line 2. Line 2 is an assignment too. What does `score` refer to after it runs?",
+              id: "6",
+              text: "`6`",
+              feedback:
+                "Line 3 changes what `score` refers to. Does it change what `best` refers to? Work out what each name refers to after every line.",
             },
-            { id: "15", text: "`15`" },
             {
-              id: "text",
-              text: "`score + 5`",
-              feedback: "There are no quotes on line 3, so Python prints a value, not text. Work out what `score` refers to by then.",
+              id: "score",
+              text: "`score`",
+              feedback: "There are no quotes around `best` on line 4, so Python prints a value, not a word.",
             },
             {
               id: "error",
-              text: "An error, because `score` can't use itself",
-              feedback:
-                "It can. Remember the two steps: Python works out the right side first, while `score` still refers to its old value.",
+              text: "An error, because `best` and `score` are linked",
+              feedback: "Two names can refer to the same value without causing an error. What does each one refer to after line 3?",
             },
           ],
-          answer: "15",
-          hint: "Line 2: work out the right side using the value `score` refers to before the line runs.",
+          answer: "5",
+          hint: "Line 2 makes `best` refer to the value `score` refers to at that moment.",
           explanation:
-            "Line 2 works out the right side first, using the current value: 10 + 5 is 15. Then `score` refers to 15, and line 3 prints it.",
+            "Line 2 makes `best` refer to the value `score` refers to then: 5. Line 3 works out 5 + 1 and makes `score` refer to 6. Only `score` moved, so `best` still refers to 5.",
         },
       ],
     },

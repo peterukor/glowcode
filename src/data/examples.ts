@@ -22,11 +22,62 @@ height = 1.62
 is_coder = True
 print(name, "is", age)`,
   steps: [
-    { line: 1, vars: { name: str("Ada") }, highlight: "name", note: 'A box labeled name now holds the string "Ada".' },
-    { line: 2, vars: { name: str("Ada"), age: int(16) }, highlight: "age", note: "age holds a whole number, an int." },
+    { line: 1, vars: { name: str("Ada") }, highlight: "name", note: 'name now refers to the string "Ada".' },
+    { line: 2, vars: { name: str("Ada"), age: int(16) }, highlight: "age", note: "age refers to a whole number, an int." },
     { line: 3, vars: { name: str("Ada"), age: int(16), height: float(1.62) }, highlight: "height", note: "Numbers with a decimal point are floats." },
     { line: 4, vars: { name: str("Ada"), age: int(16), height: float(1.62), is_coder: bool(true) }, highlight: "is_coder", note: "True and False are booleans." },
     { line: 5, vars: { name: str("Ada"), age: int(16), height: float(1.62), is_coder: bool(true) }, output: ["Ada is 16"], note: "print() shows values in the console." },
+  ],
+};
+
+const reassign: Example = {
+  id: "reassign",
+  title: "Reassignment",
+  emoji: "🔄",
+  language: "python",
+  visualizations: ["variables"],
+  code: `count = 3
+count = count + 2
+print(count)`,
+  steps: [
+    { line: 1, vars: { count: int(3) }, highlight: "count", note: "count now refers to 3." },
+    {
+      line: 2,
+      vars: { count: int(3) },
+      calc: { target: "count", parts: [{ code: "count", value: "3" }, { code: "+" }, { code: "2" }], result: "5", phase: "calculate" },
+      note: "Right side first. Python looks up count (3) and works out 3 + 2. count still refers to 3 at this moment.",
+      checkpoint: {
+        prompt: "What value will `count` refer to after line 2?",
+        choices: [
+          { id: "5", text: "`5`" },
+          {
+            id: "3",
+            text: "`3`",
+            feedback: "3 is what `count` refers to right now. Line 2 is an assignment, so `count` will refer to whatever the right side works out to.",
+          },
+          {
+            id: "expr",
+            text: "`count + 2`",
+            feedback: "There are no quotes, so `count + 2` isn't text. Python works it out using the value `count` refers to.",
+          },
+          {
+            id: "2",
+            text: "`2`",
+            feedback: "The right side is `count + 2`, not just `2`. Python uses the current value of `count` in the calculation.",
+          },
+        ],
+        answer: "5",
+        explanation: "Python works out the right side first, using the value `count` refers to now: 3 + 2 is 5. Then `count` refers to 5.",
+      },
+    },
+    {
+      line: 2,
+      vars: { count: int(5) },
+      highlight: "count",
+      calc: { target: "count", parts: [{ code: "count", value: "3" }, { code: "+" }, { code: "2" }], result: "5", phase: "assign" },
+      note: "Same line, second event: count now refers to the result, 5.",
+    },
+    { line: 3, vars: { count: int(5) }, output: ["5"], note: "print() shows the value count refers to now: 5." },
   ],
 };
 
@@ -36,24 +87,42 @@ const ifElse: Example = {
   emoji: "🔀",
   language: "python",
   visualizations: ["flow", "variables"],
-  code: `score = 82
-if score >= 70:
-    result = "pass"
+  code: `age = 16
+
+if age >= 18:
+    print("Adult")
 else:
-    result = "try again"
-print(result)`,
+    print("Minor")`,
   ifChain: {
-    branches: [
-      { id: "b1", keyword: "if", condition: { kind: "compare", id: "c1", code: "score >= 70" }, body: ['result = "pass"'] },
-    ],
-    elseBody: ['result = "try again"'],
-    after: "print(result)",
+    branches: [{ id: "b1", keyword: "if", condition: { kind: "compare", id: "c1", code: "age >= 18" }, body: ['print("Adult")'] }],
+    elseBody: ['print("Minor")'],
   },
   steps: [
-    { line: 1, vars: { score: int(82) }, highlight: "score", ifChain: { results: {} }, note: "score is set to 82." },
-    { line: 2, vars: { score: int(82) }, ifChain: { results: { c1: true }, at: { kind: "test", branch: "b1" } }, note: "Python asks: is 82 >= 70? Yes, it's True." },
-    { line: 3, vars: { score: int(82), result: str("pass") }, highlight: "result", ifChain: { results: { c1: true }, at: { kind: "body", branch: "b1" } }, note: "True, so Python follows the True line and runs the if block." },
-    { line: 6, vars: { score: int(82), result: str("pass") }, output: ["pass"], ifChain: { results: { c1: true }, at: { kind: "after" } }, note: "The else block was skipped entirely. Both paths meet again at print()." },
+    { line: 1, vars: { age: int(16) }, highlight: "age", ifChain: { results: {} }, note: "age now refers to 16." },
+    {
+      line: 3,
+      vars: { age: int(16) },
+      ifChain: { results: { c1: false }, at: { kind: "test", branch: "b1" } },
+      note: "Python checks the condition with the real value: 16 >= 18 is False. So it skips the if block.",
+      checkpoint: {
+        prompt: "`age` refers to 16. Which line will print?",
+        choices: [
+          { id: "adult", text: '`print("Adult")`', feedback: "Check the comparison with the real value. Is 16 greater than or equal to 18?" },
+          { id: "minor", text: '`print("Minor")`' },
+          { id: "both", text: "Both of them", feedback: "An if/else runs exactly one of its two blocks, never both." },
+          { id: "neither", text: "Neither", feedback: "With an else, one of the two blocks always runs. Which one runs when the condition is False?" },
+        ],
+        answer: "minor",
+        explanation: "16 >= 18 is False, so Python skips the if block and runs the else block instead. Only `Minor` is printed.",
+      },
+    },
+    {
+      line: 6,
+      vars: { age: int(16) },
+      output: ["Minor"],
+      ifChain: { results: { c1: false }, at: { kind: "else" } },
+      note: "False, so the else block runs and prints Minor. The Adult line never ran.",
+    },
   ],
 };
 
@@ -150,12 +219,20 @@ print("Bye!")`,
   ],
 };
 
+const loopCalc = (old: number, n: number, phase: "calculate" | "assign") => ({
+  target: "total",
+  parts: [{ code: "total", value: String(old) }, { code: "+" }, { code: "n", value: String(n) }],
+  result: String(old + n),
+  phase,
+});
+
 const forLoop: Example = {
   id: "loop",
   title: "For Loop",
   emoji: "🔁",
   language: "python",
   visualizations: ["loop", "variables"],
+  loopItems: [3, 5, 7],
   code: `total = 0
 for n in [3, 5, 7]:
     total = total + n
@@ -163,12 +240,32 @@ print(total)`,
   steps: [
     { line: 1, vars: { total: int(0) }, highlight: "total", note: "Start with total at 0." },
     { line: 2, vars: { total: int(0), n: int(3) }, loopIndex: 0, highlight: "n", note: "Lap 1: n takes the first item, 3." },
-    { line: 3, vars: { total: int(3), n: int(3) }, loopIndex: 0, highlight: "total", note: "total becomes 0 + 3 = 3." },
-    { line: 2, vars: { total: int(3), n: int(5) }, loopIndex: 1, highlight: "n", note: "Lap 2: n is now 5." },
-    { line: 3, vars: { total: int(8), n: int(5) }, loopIndex: 1, highlight: "total", note: "total becomes 3 + 5 = 8." },
-    { line: 2, vars: { total: int(8), n: int(7) }, loopIndex: 2, highlight: "n", note: "Lap 3: n is 7." },
-    { line: 3, vars: { total: int(15), n: int(7) }, loopIndex: 2, highlight: "total", note: "total becomes 8 + 7 = 15." },
-    { line: 4, vars: { total: int(15), n: int(7) }, loopIndex: 3, output: ["15"], note: "The loop is done. Print 15." },
+    { line: 3, vars: { total: int(0), n: int(3) }, loopIndex: 0, calc: loopCalc(0, 3, "calculate"), note: "Work out total + n: 0 + 3 is 3." },
+    { line: 3, vars: { total: int(3), n: int(3) }, loopIndex: 0, highlight: "total", calc: loopCalc(0, 3, "assign"), note: "total now refers to 3." },
+    { line: 2, vars: { total: int(3), n: int(5) }, loopIndex: 1, highlight: "n", note: "Back to line 2. Lap 2: n is now 5." },
+    { line: 3, vars: { total: int(3), n: int(5) }, loopIndex: 1, calc: loopCalc(3, 5, "calculate"), note: "Work out total + n: 3 + 5 is 8." },
+    { line: 3, vars: { total: int(8), n: int(5) }, loopIndex: 1, highlight: "total", calc: loopCalc(3, 5, "assign"), note: "total now refers to 8." },
+    { line: 2, vars: { total: int(8), n: int(7) }, loopIndex: 2, highlight: "n", note: "Lap 3: n is 7, the last item." },
+    {
+      line: 3,
+      vars: { total: int(8), n: int(7) },
+      loopIndex: 2,
+      calc: loopCalc(8, 7, "calculate"),
+      note: "Work out total + n: 8 + 7 is 15.",
+      checkpoint: {
+        prompt: "`total` refers to 8 and `n` refers to 7. What will `total + n` work out to?",
+        choices: [
+          { id: "15", text: "`15`" },
+          { id: "7", text: "`7`", feedback: "That's just `n`. The line adds `n` to what `total` already refers to." },
+          { id: "8", text: "`8`", feedback: "8 is what `total` refers to before this line. Add `n` to it." },
+        ],
+        answer: "15",
+        explanation: "Each lap adds the current item to the running total: 8 + 7 is 15.",
+      },
+    },
+    { line: 3, vars: { total: int(15), n: int(7) }, loopIndex: 2, highlight: "total", calc: loopCalc(8, 7, "assign"), note: "total now refers to 15." },
+    { line: 2, vars: { total: int(15), n: int(7) }, loopIndex: 3, note: "Back to line 2 once more, but there are no items left. The loop ends." },
+    { line: 4, vars: { total: int(15), n: int(7) }, loopIndex: 3, output: ["15"], note: "Python carries on after the loop and prints 15." },
   ],
 };
 
@@ -192,6 +289,14 @@ print(fruits[2], first)`,
   ],
 };
 
+const greetCall = (phase: "call" | "run" | "result" | "assign") => ({
+  name: "greet",
+  args: ['"Sam"'],
+  returns: '"Hi, Sam"',
+  assignTo: "text",
+  phase,
+});
+
 const functions: Example = {
   id: "function",
   title: "Functions",
@@ -205,16 +310,99 @@ const functions: Example = {
 text = greet("Sam")
 print(text)`,
   steps: [
-    { line: 1, vars: {}, note: "Python learns the recipe called greet. Nothing runs yet." },
-    { line: 5, vars: {}, note: 'greet("Sam") is called. "Sam" goes in as person.' },
-    { line: 2, vars: { person: str("Sam"), message: str("Hi, Sam") }, highlight: "message", note: "Inside the function, message is built." },
-    { line: 3, vars: { person: str("Sam"), message: str("Hi, Sam") }, returned: '"Hi, Sam"', note: "return hands the value back to the line that called greet(). Nothing is printed yet." },
-    { line: 5, vars: { text: str("Hi, Sam") }, highlight: "text", note: "The returned value lands in text." },
-    { line: 6, vars: { text: str("Hi, Sam") }, output: ["Hi, Sam"], note: "Printed!" },
+    { line: 1, vars: {}, note: "Python learns the recipe called greet. Nothing inside it runs yet." },
+    { line: 5, vars: {}, call: greetCall("call"), note: 'greet("Sam") is called. "Sam" goes in as person.' },
+    {
+      line: 2,
+      vars: { person: str("Sam"), message: str("Hi, Sam") },
+      highlight: "message",
+      call: greetCall("run"),
+      note: "Inside the function, message is built from the input.",
+    },
+    {
+      line: 3,
+      vars: { person: str("Sam"), message: str("Hi, Sam") },
+      call: greetCall("result"),
+      note: "return hands the value back to the line that called greet(). Nothing is printed.",
+    },
+    { line: 5, vars: { text: str("Hi, Sam") }, highlight: "text", call: greetCall("assign"), note: "Back on line 5, the returned value is stored: text refers to it." },
+    {
+      line: 6,
+      vars: { text: str("Hi, Sam") },
+      output: ["Hi, Sam"],
+      call: { name: "print", args: ['"Hi, Sam"'], prints: ["Hi, Sam"], phase: "result" },
+      note: "Only now, print() shows it on the screen.",
+    },
   ],
 };
 
-export const examples: Example[] = [variables, ifElse, elifChain, andOr, forLoop, listsAndStrings, functions];
+const builtinLen: Example = {
+  id: "len",
+  title: "len()",
+  emoji: "📏",
+  language: "python",
+  visualizations: ["function", "variables"],
+  code: `word = "cat"
+length = len(word)
+print(length)`,
+  steps: [
+    { line: 1, vars: { word: str("cat") }, highlight: "word", note: 'word now refers to "cat".' },
+    {
+      line: 2,
+      vars: { word: str("cat") },
+      call: { name: "len", args: ['"cat"'], returns: "3", assignTo: "length", phase: "call" },
+      note: 'len(word) is called. The value word refers to, "cat", goes in.',
+    },
+    {
+      line: 2,
+      vars: { word: str("cat") },
+      call: { name: "len", args: ['"cat"'], returns: "3", assignTo: "length", phase: "result" },
+      note: "len() counts the characters and returns 3. Look at Printed output: still empty. Returning isn't printing.",
+      checkpoint: {
+        prompt: "What does `len(word)` do with its answer?",
+        choices: [
+          { id: "returns", text: "Hands `3` back to line 2, without showing anything" },
+          {
+            id: "prints",
+            text: "Prints `3` on the screen",
+            feedback: "`len()` doesn't print anything. Only `print()` puts text on the screen, and line 2 doesn't call it.",
+          },
+          { id: "cat", text: 'Hands back `"cat"`', feedback: '`len()` gives back how many characters there are, not the text itself.' },
+          {
+            id: "changes",
+            text: "Changes `word` to `3`",
+            feedback: "`len()` only reads the string. `word` still refers to `\"cat\"` afterwards.",
+          },
+        ],
+        answer: "returns",
+        explanation:
+          "`len()` returns 3: it hands the value back to the code that called it. Nothing appears on the screen. Line 2 then stores the returned value in `length`.",
+      },
+    },
+    {
+      line: 2,
+      vars: { word: str("cat"), length: int(3) },
+      highlight: "length",
+      call: { name: "len", args: ['"cat"'], returns: "3", assignTo: "length", phase: "assign" },
+      note: "Same line, last event: length now refers to the returned value, 3.",
+    },
+    {
+      line: 3,
+      vars: { word: str("cat"), length: int(3) },
+      call: { name: "print", args: ["3"], prints: ["3"], returns: "None", phase: "call" },
+      note: "print(length) is called with the value length refers to, 3.",
+    },
+    {
+      line: 3,
+      vars: { word: str("cat"), length: int(3) },
+      output: ["3"],
+      call: { name: "print", args: ["3"], prints: ["3"], returns: "None", phase: "result" },
+      note: "print() shows 3 on the screen. It returns None (Python's value for \"nothing\"), which this program doesn't use.",
+    },
+  ],
+};
+
+export const examples: Example[] = [variables, reassign, ifElse, elifChain, andOr, forLoop, listsAndStrings, functions, builtinLen];
 
 export function getExample(id: string): Example {
   return examples.find((e) => e.id === id) ?? variables;
