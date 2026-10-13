@@ -6,7 +6,7 @@
  * so lessons can be reordered or inserted without breaking anyone's saved progress.
  */
 import type { Language, Walkthrough } from "@/types/trace";
-import type { Variables } from "@/types/python";
+import type { PyValue, Variables } from "@/types/python";
 import type { ReferenceId } from "@/references/registry";
 
 /**
@@ -65,7 +65,15 @@ export type LessonSection = {
  */
 export type RichText = string;
 
-export type CalloutTone = "real-world" | "tip" | "mindset" | "careful" | "other-languages";
+/**
+ * Use callouts sparingly: one or two per section at most.
+ * - real-world: connects the idea to something familiar
+ * - execution: a short "how Python runs this" explanation
+ * - mindset: a programmer-thinking prompt
+ * - tip / careful: practical advice or a common trap
+ * - other-languages: an optional comparison that beginners can skip
+ */
+export type CalloutTone = "real-world" | "execution" | "mindset" | "tip" | "careful" | "other-languages";
 
 export type Block =
   | { type: "text"; text: RichText }
@@ -74,6 +82,7 @@ export type Block =
   | CodeBlock
   | FigureBlock
   | QuestionBlock
+  | ReflectBlock
   | PracticeBlock;
 
 export type CodeBlock = {
@@ -81,17 +90,27 @@ export type CodeBlock = {
   code: string;
   language: Language;
   caption?: RichText;
-  /** What the program prints, shown under the code. */
+  /**
+   * What the program prints to the screen (via print()), shown under the code as
+   * "Printed output". Never use it for return values.
+   */
   output?: string[];
+  /** Lines the surrounding text talks about, marked in the margin (1-indexed). */
+  highlightLines?: number[];
   /** Adds "Walk through code" for a step-by-step view of this snippet. */
   walkthrough?: Walkthrough;
 };
 
-/** A static illustration drawn with an existing visualization component. */
+/** A static concept illustration. Always introduce it in the text and give it a caption. */
 export type FigureBlock = {
   type: "figure";
   caption: RichText;
-  figure: { kind: "variables"; vars: Variables; highlight?: string };
+  figure:
+    | { kind: "variables"; vars: Variables; highlight?: string }
+    /** Names pointing at values: Python's actual model. `previous` shows a value the name used to refer to. */
+    | { kind: "names"; bindings: { name: string; value: PyValue; previous?: PyValue }[] }
+    /** A short ordered process, drawn as connected steps (e.g. how instructions are followed). */
+    | { kind: "sequence"; steps: RichText[] };
 };
 
 /**
@@ -105,20 +124,54 @@ export type QuestionBlock = {
   variant: "predict" | "debug";
   prompt: RichText;
   code?: string;
-  choices: { id: string; text: RichText }[];
+  /** What Python printed when the code ran, e.g. an error message for debug questions. */
+  errorOutput?: string;
+  /**
+   * Answer options. `feedback` on a wrong choice explains the misunderstanding behind it
+   * without giving the answer away, so the student can try again.
+   */
+  choices: { id: string; text: RichText; feedback?: RichText }[];
   answer: string;
-  /** Shown after answering; explain why, not just what. */
+  /** An optional nudge students can ask for before answering. */
+  hint?: RichText;
+  /** Shown once the student gets it right or chooses to reveal it; explain why, not just what. */
   explanation: RichText;
 };
 
+/**
+ * An open "think it through" prompt: the student reasons on their own (or out loud),
+ * then reveals a model explanation to compare with. Nothing is typed or graded.
+ */
+export type ReflectBlock = {
+  type: "reflect";
+  id: string;
+  prompt: RichText;
+  code?: string;
+  /** The model explanation, revealed on request. */
+  answer: RichText;
+};
+
+/**
+ * A task students solve on paper, in their own editor or in their head.
+ * Glowcode never runs or checks their code; it offers hints and a sample to compare with.
+ */
 export type PracticeBlock = {
   type: "practice";
   id: string;
+  /** The goal, in one or two sentences. */
   prompt: RichText;
+  /** Optional background that makes the goal concrete. */
+  context?: RichText;
+  /** What a working solution should do, for students to check their own work against. */
+  checklist?: RichText[];
+  /** Revealed one at a time, from a gentle nudge to a more specific step. */
   hints?: RichText[];
   /** A sample solution the student can reveal after trying. */
   solution: string;
+  /** Why the sample works: the reasoning, not a restatement of the code. */
   solutionNote?: RichText;
+  /** Other valid approaches worth knowing about. */
+  alternatives?: { code?: string; note: RichText }[];
 };
 
-export type ActivityBlock = QuestionBlock | PracticeBlock;
+export type ActivityBlock = QuestionBlock | ReflectBlock | PracticeBlock;

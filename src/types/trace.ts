@@ -26,6 +26,11 @@ export type TraceStep = {
    * e.g. ["age + 1", "13 + 1", "14"]. Lets one line become several small steps.
    */
   evaluation?: string[];
+  /**
+   * A value handed back by a function or method at this step, e.g. "'Hi, Sam'" or "None".
+   * Shown separately from printed output: returning is not printing.
+   */
+  returned?: string;
   loopIndex?: number;
   ifChain?: IfChainTrace;
 };

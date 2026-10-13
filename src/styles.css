@@ -685,7 +685,8 @@
   }
 }
 
-/* Comfortable reading: ~68 characters per line, generous leading. */
+/* Comfortable reading: ~68 characters per line, generous leading. Text keeps a reading
+   width; code, figures and activities may use the full column. */
 .lesson-prose {
   font-size: 1.0625rem;
   line-height: 1.75;
@@ -695,6 +696,26 @@
 .lesson-prose > ol {
   max-width: 68ch;
   margin-top: 1rem;
+}
+.lesson-prose > :first-child {
+  margin-top: 0;
+}
+.lesson-prose strong {
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+/* Each section is a new idea: a quiet rule and space make the break clear. */
+.lesson-section + .lesson-section {
+  margin-top: 3.5rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Code that scrolls sideways can be focused and scrolled with the keyboard. */
+.code-view:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: -3px;
 }
 .lesson-prose > ul,
 .lesson-prose > ol {
