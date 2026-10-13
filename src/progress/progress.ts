@@ -110,3 +110,14 @@ export function summarizeCourse(course: Course, cp: CourseProgress | undefined):
     resumeLessonId: lastLesson?.lesson.id ?? lessons[0]?.lesson.id,
   };
 }
+
+/**
+ * Where "Continue" should land: the last lesson, scrolled to the last activity if the
+ * student was working on one in that lesson. Undefined for courses with no lessons.
+ */
+export function resumeTarget(course: Course, cp: CourseProgress | undefined) {
+  const { resumeLessonId } = summarizeCourse(course, cp);
+  if (!resumeLessonId) return undefined;
+  const activity = cp?.lastActivity?.lessonId === resumeLessonId ? cp.lastActivity.activityId : undefined;
+  return { lessonId: resumeLessonId, hash: activity ? `activity-${activity}` : undefined };
+}

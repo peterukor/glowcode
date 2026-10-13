@@ -2,24 +2,16 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, Clock } from "lucide-react";
 import { isOpenable, publishedLessons } from "@/courses/queries";
 import type { Course } from "@/courses/types";
-import { summarizeCourse, type CourseProgress as Progress } from "@/progress/progress";
+import { resumeTarget, summarizeCourse, type CourseProgress as Progress } from "@/progress/progress";
 import { CourseProgress } from "./CourseProgress";
 import { courseTheme } from "./theme";
-
-/** Where "Continue" should land: the last lesson, at the last activity if it was in that lesson. */
-export function resumeLink(course: Course, progress: Progress | undefined) {
-  const { resumeLessonId } = summarizeCourse(course, progress);
-  if (!resumeLessonId) return undefined;
-  const activity = progress?.lastActivity?.lessonId === resumeLessonId ? progress.lastActivity.activityId : undefined;
-  return { lessonId: resumeLessonId, hash: activity ? `activity-${activity}` : undefined };
-}
 
 export function CourseCard({ course, progress }: { course: Course; progress: Progress | undefined }) {
   const theme = courseTheme[course.theme];
   const open = isOpenable(course);
   const summary = summarizeCourse(course, progress);
   const lessonCount = publishedLessons(course).length;
-  const target = resumeLink(course, progress);
+  const target = resumeTarget(course, progress);
 
   return (
     <article

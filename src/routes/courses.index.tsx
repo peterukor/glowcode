@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
-import { CourseCard, resumeLink } from "@/components/course/CourseCard";
+import { CourseCard } from "@/components/course/CourseCard";
 import { courses, getCourse } from "@/courses/registry";
-import { summarizeCourse } from "@/progress/progress";
+import { resumeTarget, summarizeCourse } from "@/progress/progress";
 import { useAllProgress } from "@/progress/useProgress";
 
 export const Route = createFileRoute("/courses/")({
@@ -25,7 +25,7 @@ function CourseCatalog() {
     .map(([id, p]) => ({ course: getCourse(id), p }))
     .find(({ course, p }) => course && summarizeCourse(course, p).lastLesson);
   const recentSummary = recent?.course ? summarizeCourse(recent.course, recent.p) : undefined;
-  const recentTarget = recent?.course ? resumeLink(recent.course, recent.p) : undefined;
+  const recentTarget = recent?.course ? resumeTarget(recent.course, recent.p) : undefined;
 
   return (
     <div className="relative">

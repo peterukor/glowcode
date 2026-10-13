@@ -13,8 +13,15 @@ export default tseslint.config(
     plugins: { "react-hooks": reactHooks, "react-refresh": reactRefresh },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      // Route files export `Route` alongside their component, which is the TanStack convention.
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true, allowExportNames: ["Route"] }],
+      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      // A leading underscore marks a parameter that's intentionally unused.
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
+  },
+  {
+    // TanStack route files export `Route` next to their components by design; the router
+    // plugin handles hot reloading for them.
+    files: ["src/routes/**/*.tsx"],
+    rules: { "react-refresh/only-export-components": "off" },
   },
 );

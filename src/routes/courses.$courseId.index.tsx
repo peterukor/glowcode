@@ -1,9 +1,9 @@
 import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
 import { ArrowLeft, Clock } from "lucide-react";
-import { resumeLink } from "@/components/course/CourseCard";
 import { courseTheme } from "@/components/course/theme";
 import { isOpenable } from "@/courses/queries";
 import { getCourse } from "@/courses/registry";
+import { resumeTarget } from "@/progress/progress";
 import { progressState } from "@/progress/useProgress";
 
 /**
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/courses/$courseId/")({
     const course = getCourse(params.courseId);
     if (!course) throw notFound();
     if (isOpenable(course)) {
-      const target = resumeLink(course, progressState.get().courses[course.id]);
+      const target = resumeTarget(course, progressState.get().courses[course.id]);
       if (target) {
         throw redirect({
           to: "/courses/$courseId/$lessonId",

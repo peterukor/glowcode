@@ -41,12 +41,17 @@ function blocksOf(lesson: Lesson): Block[] {
   return lesson.sections.flatMap((s) => s.blocks);
 }
 
+/** Activity id recorded when a student opens a walkthrough (for "resume where you left off"). */
+export const walkthroughActivityId = (walkthroughId: string) => `walkthrough-${walkthroughId}`;
+
 export function walkthroughsIn(lesson: Lesson): Walkthrough[] {
   return blocksOf(lesson).flatMap((b) => (b.type === "code" && b.walkthrough ? [b.walkthrough] : []));
 }
 
 export function activitiesIn(lesson: Lesson): ActivityBlock[] {
-  return blocksOf(lesson).filter((b): b is ActivityBlock => b.type === "question" || b.type === "practice");
+  return blocksOf(lesson).filter(
+    (b): b is ActivityBlock => b.type === "question" || b.type === "reflect" || b.type === "practice",
+  );
 }
 
 function richTextIn(block: Block): RichText[] {
@@ -60,11 +65,25 @@ function richTextIn(block: Block): RichText[] {
     case "code":
       return block.caption ? [block.caption] : [];
     case "figure":
-      return [block.caption];
+      return [block.caption, ...(block.figure.kind === "sequence" ? block.figure.steps : [])];
     case "question":
-      return [block.prompt, block.explanation, ...block.choices.map((c) => c.text)];
+      return [
+        block.prompt,
+        block.explanation,
+        ...(block.hint ? [block.hint] : []),
+        ...block.choices.flatMap((c) => [c.text, ...(c.feedback ? [c.feedback] : [])]),
+      ];
+    case "reflect":
+      return [block.prompt, block.answer];
     case "practice":
-      return [block.prompt, ...(block.hints ?? []), ...(block.solutionNote ? [block.solutionNote] : [])];
+      return [
+        block.prompt,
+        ...(block.context ? [block.context] : []),
+        ...(block.checklist ?? []),
+        ...(block.hints ?? []),
+        ...(block.solutionNote ? [block.solutionNote] : []),
+        ...(block.alternatives ?? []).map((a) => a.note),
+      ];
   }
 }
 
@@ -108,8 +127,17 @@ export function validateCourses(courses: Course[]): string[] {
       for (const id of refs) if (!getReference(id)) problems.push(`${where}: unknown reference "${id}"`);
 
       for (const block of blocksOf(lesson)) {
-        if (block.type === "question" && !block.choices.some((c) => c.id === block.answer)) {
-          problems.push(`${where}: question "${block.id}" answer "${block.answer}" isn't one of its choices`);
+        if (block.type === "question") {
+          if (!block.choices.some((c) => c.id === block.answer)) {
+            problems.push(`${where}: question "${block.id}" answer "${block.answer}" isn't one of its choices`);
+          }
+          dup(block.choices.map((c) => c.id), "choice", `${where} question "${block.id}"`);
+        }
+        if (block.type === "code" && block.highlightLines) {
+          const lineCount = block.code.split("\n").length;
+          for (const line of block.highlightLines) {
+            if (line < 1 || line > lineCount) problems.push(`${where}: highlightLines mentions line ${line}, which doesn't exist`);
+          }
         }
         if (block.type === "code" && block.walkthrough && block.walkthrough.code !== block.code) {
           problems.push(`${where}: walkthrough "${block.walkthrough.id}" code differs from the code shown in the lesson`);
