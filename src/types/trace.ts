@@ -53,7 +53,8 @@ export type CalcEvent = {
   /** The name on the left of `=`. */
   target: string;
   /** The right side as written, with the value Python used for each name, e.g.
-   *  [{ code: "total", value: "13" }, { code: "+" }, { code: "1" }]. */
+   *  [{ code: "total", value: "13" }, { code: "+" }, { code: "1" }].
+   *  Operators (+ - * / // % **) are recognised by their symbol; literals need no value. */
   parts: { code: string; value?: string }[];
   /** The value the right side works out to, as Python would write it. */
   result: string;

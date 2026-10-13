@@ -2,6 +2,9 @@ import type { Variables } from "@/types/python";
 import type { CalcEvent } from "@/types/trace";
 import { formatValue } from "./values";
 
+/** Python's arithmetic operators. Every other part is an operand: a name or a literal like `1`. */
+const OPERATORS = new Set(["+", "-", "*", "/", "//", "%", "**"]);
+
 /**
  * `total = total + 1` as previous value → operation → result → name.
  * The layout is the same in both phases; only what glows changes:
@@ -22,14 +25,14 @@ export function CalculationView({ calc, vars }: { calc: CalcEvent; vars: Variabl
 
       <div className="flex flex-wrap items-stretch gap-2 font-mono" aria-hidden>
         {calc.parts.map((part, i) =>
-          part.value === undefined ? (
+          OPERATORS.has(part.code) ? (
             <span key={i} className="calc-node calc-op" data-on={!assigning || undefined}>
               {part.code}
             </span>
           ) : (
             <span key={i} className="calc-node calc-operand" data-on={!assigning || undefined}>
-              {part.code !== part.value && <span className="calc-caption">{part.code}</span>}
-              <span className="font-bold">{part.value}</span>
+              {part.value !== undefined && part.value !== part.code && <span className="calc-caption">{part.code}</span>}
+              <span className="font-bold">{part.value ?? part.code}</span>
             </span>
           ),
         )}

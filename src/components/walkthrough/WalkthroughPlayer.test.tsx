@@ -138,6 +138,9 @@ describe("execution events", () => {
     fireEvent.click(next());
     expect(screen.getByText("First: work out the right side")).toBeTruthy();
     expect(screen.getByText("result, not stored yet")).toBeTruthy();
+    // The literal 2 is an operand like count; only + is drawn as the operator.
+    expect([...document.querySelectorAll(".calc-op")].map((el) => el.textContent)).toEqual(["+"]);
+    expect([...document.querySelectorAll(".calc-operand")].map((el) => el.textContent)).toEqual(["count3", "2"]);
     expect(varValues()).toEqual(["countint3"]); // the old value, until the assignment
 
     fireEvent.click(next());
