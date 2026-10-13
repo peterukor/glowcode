@@ -2,10 +2,11 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Lightbulb, Target } from "lucide-react";
 import { useState } from "react";
 import { CodeView } from "@/components/CodeView";
-import { StepControls, useStepper } from "@/components/Stepper";
-import { ExampleViz } from "@/components/viz";
-import { getExample } from "@/lib/examples";
-import { allLessons, findLesson } from "@/lib/lessons";
+import { PlaybackControls } from "@/components/PlaybackControls";
+import { getExample } from "@/data/examples";
+import { allLessons, findLesson, type Lesson } from "@/data/lessons";
+import { usePlayback } from "@/hooks/usePlayback";
+import { ExampleVisualization } from "@/visualizations/ExampleVisualization";
 
 export const Route = createFileRoute("/lessons/$slug")({
   loader: ({ params }) => {
@@ -16,25 +17,28 @@ export const Route = createFileRoute("/lessons/$slug")({
   head: ({ loaderData }) => ({
     meta: loaderData
       ? [
-          { title: `${loaderData.lesson.title} — Glowcode Lessons` },
+          { title: `${loaderData.lesson.title} · Glowcode Lessons` },
           { name: "description", content: loaderData.lesson.objective },
-          { property: "og:title", content: `${loaderData.lesson.title} — Glowcode` },
-          { property: "og:description", content: loaderData.lesson.objective },
         ]
-      : [{ title: "Lesson not found — Glowcode" }, { name: "robots", content: "noindex" }],
+      : [{ title: "Lesson not found · Glowcode" }],
   }),
   component: LessonPage,
 });
 
 function LessonPage() {
   const { lesson } = Route.useLoaderData();
+  // Keyed by slug so the hint, playback and challenge editor reset when moving between lessons.
+  return <LessonContent key={lesson.slug} lesson={lesson} />;
+}
+
+function LessonContent({ lesson }: { lesson: Lesson }) {
   const ex = getExample(lesson.exampleId);
-  const s = useStepper(ex.steps.length);
+  const playback = usePlayback(ex.steps.length, ex.id);
   const [hint, setHint] = useState(false);
   const idx = allLessons.findIndex((l) => l.slug === lesson.slug);
   const prev = allLessons[idx - 1];
   const next = allLessons[idx + 1];
-  const step = ex.steps[s.step];
+  const step = ex.steps[Math.min(playback.step, ex.steps.length - 1)]!;
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-10">
@@ -56,10 +60,10 @@ function LessonPage() {
           <CodeView code={ex.code} activeLine={step.line} className="shadow-soft" />
         </div>
 
-        <div className="rounded-3xl border-2 bg-card p-5 shadow-soft">
-          <StepControls s={s} compact />
-          <div className="mt-6 min-h-56"><ExampleViz example={ex} step={step} kind={ex.viz[0]} /></div>
-          <p key={s.step} className="animate-pop mt-5 rounded-2xl bg-secondary p-4 font-medium text-secondary-foreground">💡 {step.note}</p>
+        <div className="min-w-0 rounded-3xl border-2 bg-card p-5 shadow-soft">
+          <PlaybackControls playback={playback} compact />
+          <div className="mt-6 min-h-56"><ExampleVisualization example={ex} step={step} kind={ex.visualizations[0]!} /></div>
+          <p key={playback.step} className="animate-pop mt-5 rounded-2xl bg-secondary p-4 font-medium text-secondary-foreground">💡 {step.note}</p>
         </div>
       </div>
 

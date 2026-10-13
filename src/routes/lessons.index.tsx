@@ -1,13 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { chapters, type Lesson } from "@/lib/lessons";
+import { chapters, type Lesson } from "@/data/lessons";
 
 export const Route = createFileRoute("/lessons/")({
   head: () => ({
     meta: [
-      { title: "Python Lessons — Glowcode" },
+      { title: "Python Lessons · Glowcode" },
       { name: "description", content: "A visual learning path through Python: variables, loops, lists, functions and more." },
-      { property: "og:title", content: "Python Lessons — Glowcode" },
-      { property: "og:description", content: "A colorful, visual path from zero to functions." },
     ],
   }),
   component: Lessons,

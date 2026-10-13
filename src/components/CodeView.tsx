@@ -1,8 +1,9 @@
 import { Fragment } from "react";
 
-const KW = new Set(["def", "return", "if", "else", "elif", "for", "while", "in", "and", "or", "not", "True", "False", "None", "import", "from", "class", "range"]);
-const FN = new Set(["print", "len", "append", "input", "str", "int"]);
+const KEYWORDS = new Set(["def", "return", "if", "else", "elif", "for", "while", "in", "and", "or", "not", "True", "False", "None", "import", "from", "class", "range"]);
+const BUILTINS = new Set(["print", "len", "append", "input", "str", "int"]);
 
+/** Tiny Python highlighter: good enough for short beginner snippets, no dependency needed. */
 function highlight(line: string) {
   const parts = line.split(/(#.*$|"[^"]*"|'[^']*'|\b\d+(?:\.\d+)?\b|\b\w+\b)/g);
   return parts.map((p, i) => {
@@ -11,8 +12,8 @@ function highlight(line: string) {
     if (p.startsWith("#")) cls = "text-syn-com italic";
     else if (/^["']/.test(p)) cls = "text-syn-str";
     else if (/^\d/.test(p)) cls = "text-syn-num";
-    else if (KW.has(p)) cls = "text-syn-kw font-semibold";
-    else if (FN.has(p)) cls = "text-syn-fn";
+    else if (KEYWORDS.has(p)) cls = "text-syn-kw font-semibold";
+    else if (BUILTINS.has(p)) cls = "text-syn-fn";
     return cls ? <span key={i} className={cls}>{p}</span> : <Fragment key={i}>{p}</Fragment>;
   });
 }
@@ -27,7 +28,8 @@ export function CodeView({ code, activeLine, className = "" }: { code: string; a
         return (
           <div key={idx} className={`flex pr-4 transition-colors ${active ? "bg-code-active" : ""}`}>
             <span className={`w-10 shrink-0 select-none border-l-4 pr-3 text-right ${active ? "border-sun text-sun" : "border-transparent text-code-line"}`}>{idx + 1}</span>
-            <code className="whitespace-pre">{highlight(ln) }{ln === "" ? " " : null}</code>
+            <code className="whitespace-pre">{highlight(ln)}
+              {ln === "" ? " " : null}</code>
           </div>
         );
       })}
