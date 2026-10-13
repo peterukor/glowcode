@@ -92,6 +92,36 @@ describe("validateCourses", () => {
     expect(problems.some((p) => p.includes('Duplicate lesson id "dup"'))).toBe(true);
     expect(problems.some((p) => p.includes('unknown reference "nope.missing"'))).toBe(true);
   });
+
+  it("checks question choices, marked lines and reference links in feedback", () => {
+    const withBlocks = (blocks: Lesson["sections"][number]["blocks"]): Course => ({
+      ...fixture,
+      chapters: [{ id: "x", title: "X", description: "", lessons: [{ ...lesson("l"), sections: [{ id: "s", title: "S", blocks }] }] }],
+    });
+    const problems = validateCourses([
+      withBlocks([
+        {
+          type: "question",
+          id: "q",
+          variant: "predict",
+          prompt: "?",
+          choices: [
+            { id: "a", text: "A", feedback: "See [this](ref:nope.feedback)." },
+            { id: "a", text: "Also A" },
+          ],
+          answer: "b",
+          explanation: "",
+        },
+        { type: "code", language: "python", code: "x = 1", highlightLines: [2] },
+        { type: "reflect", id: "q", prompt: "Why?", answer: "Because." },
+      ]),
+    ]);
+    expect(problems.some((p) => p.includes('answer "b" isn\'t one of its choices'))).toBe(true);
+    expect(problems.some((p) => p.includes('Duplicate choice id "a"'))).toBe(true);
+    expect(problems.some((p) => p.includes("line 2, which doesn't exist"))).toBe(true);
+    expect(problems.some((p) => p.includes('unknown reference "nope.feedback"'))).toBe(true);
+    expect(problems.some((p) => p.includes('Duplicate activity id "q"'))).toBe(true);
+  });
 });
 
 describe("parseRichText", () => {

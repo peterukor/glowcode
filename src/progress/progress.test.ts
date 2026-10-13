@@ -5,6 +5,7 @@ import {
   parseProgress,
   PROGRESS_VERSION,
   recordActivity,
+  resumeTarget,
   setLessonComplete,
   summarizeCourse,
   visitLesson,
@@ -85,6 +86,21 @@ describe("progress rules", () => {
   it("remembers the last activity", () => {
     const s = recordActivity(emptyProgress(), "py", "a", "predict-1", now);
     expect(s.courses["py"]!.lastActivity).toEqual({ lessonId: "a", activityId: "predict-1" });
+  });
+
+  it("resumes at the last activity of the last visited lesson", () => {
+    const c = course([lesson("a"), lesson("b")]);
+    let s = visitLesson(emptyProgress(), "py", "b", now);
+    s = recordActivity(s, "py", "b", "walkthrough-py-birthday", later);
+    expect(resumeTarget(c, s.courses["py"])).toEqual({ lessonId: "b", hash: "activity-walkthrough-py-birthday" });
+  });
+
+  it("resumes at the top of a lesson when the last activity was elsewhere", () => {
+    const c = course([lesson("a"), lesson("b")]);
+    let s = recordActivity(emptyProgress(), "py", "a", "predict-1", now);
+    s = visitLesson(s, "py", "b", later);
+    expect(resumeTarget(c, s.courses["py"])).toEqual({ lessonId: "b", hash: undefined });
+    expect(resumeTarget(c, undefined)).toEqual({ lessonId: "a", hash: undefined });
   });
 });
 
