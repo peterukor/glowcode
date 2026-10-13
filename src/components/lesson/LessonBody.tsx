@@ -8,7 +8,7 @@ import { QuestionActivity } from "./QuestionActivity";
 import { RichTextView } from "./RichTextView";
 
 export type LessonHandlers = {
-  onOpenWalkthrough: (walkthroughId: string) => void;
+  /** A student worked on an activity (answered, opened a hint or a walkthrough). */
   onActivity: (activityId: string) => void;
 };
 
@@ -80,7 +80,7 @@ function BlockView({ block, handlers }: { block: Block; handlers: LessonHandlers
     }
 
     case "code":
-      return <CodeExample block={block} onOpenWalkthrough={handlers.onOpenWalkthrough} />;
+      return <CodeExample block={block} onActivity={handlers.onActivity} />;
 
     case "figure":
       return (

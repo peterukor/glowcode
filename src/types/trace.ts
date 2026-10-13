@@ -39,7 +39,7 @@ export type Language = "python" | "java";
  * Lessons attach these to code examples; the playground uses them as demos.
  */
 export type Walkthrough = {
-  /** Stable, unique across the app; used in URLs (?walkthrough=<id>). */
+  /** Stable and unique across the app; also used to remember the last walkthrough a student opened. */
   id: string;
   title: string;
   language: Language;

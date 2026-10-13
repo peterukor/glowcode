@@ -1,13 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown, Info, Terminal } from "lucide-react";
+import { Info } from "lucide-react";
 import { useState } from "react";
-import { CodeView } from "@/components/CodeView";
-import { PlaybackControls } from "@/components/PlaybackControls";
+import { WalkthroughPlayer } from "@/components/walkthrough/WalkthroughPlayer";
 import { examples } from "@/data/examples";
-import { usePlayback } from "@/hooks/usePlayback";
-import type { VisualizationKind } from "@/types/trace";
-import { ExampleVisualization, visualizationLabels } from "@/visualizations/ExampleVisualization";
-import { TypeLegend, VariablesPanel } from "@/visualizations/VariableBox";
 
 export const Route = createFileRoute("/playground")({
   head: () => ({
@@ -22,119 +17,33 @@ export const Route = createFileRoute("/playground")({
 function Playground() {
   const [exampleId, setExampleId] = useState(examples[0]!.id);
   const example = examples.find((e) => e.id === exampleId) ?? examples[0]!;
-  const playback = usePlayback(example.steps.length, example.id);
-  const [chosenKind, setChosenKind] = useState<VisualizationKind>(example.visualizations[0]!);
-  const [consoleOpen, setConsoleOpen] = useState(true);
 
-  const step = example.steps[Math.min(playback.step, example.steps.length - 1)]!;
-  const kind = example.visualizations.includes(chosenKind) ? chosenKind : example.visualizations[0]!;
+  const picker = (
+    <div className="mb-5 flex flex-wrap items-center gap-2">
+      <span className="mr-2 text-sm font-bold text-muted-foreground">Examples</span>
+      {examples.map((e) => (
+        <button
+          key={e.id}
+          type="button"
+          onClick={() => setExampleId(e.id)}
+          aria-pressed={e.id === exampleId}
+          className={`rounded-full border-2 px-4 py-1.5 text-sm font-semibold transition-all ${
+            e.id === exampleId ? "border-primary bg-primary text-primary-foreground shadow-soft" : "bg-card hover:border-primary"
+          }`}
+        >
+          {e.emoji} {e.title}
+        </button>
+      ))}
+      <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-sun/25 px-3 py-1 text-xs font-bold">
+        <Info className="h-3.5 w-3.5" /> Prototype: replays a pre-recorded trace
+      </span>
+    </div>
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-5">
-      <div className="mb-5 flex flex-wrap items-center gap-2">
-        <span className="mr-2 text-sm font-bold text-muted-foreground">Examples</span>
-        {examples.map((e) => (
-          <button
-            key={e.id}
-            onClick={() => {
-              setExampleId(e.id);
-              setChosenKind(e.visualizations[0]!);
-            }}
-            className={`rounded-full border-2 px-4 py-1.5 text-sm font-semibold transition-all ${
-              e.id === exampleId ? "border-primary bg-primary text-primary-foreground shadow-soft" : "bg-card hover:border-primary"
-            }`}
-          >
-            {e.emoji} {e.title}
-          </button>
-        ))}
-        <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-sun/25 px-3 py-1 text-xs font-bold">
-          <Info className="h-3.5 w-3.5" /> Prototype: replays a pre-recorded trace
-        </span>
-      </div>
-
-      <div className="mb-5 rounded-3xl border-2 bg-card p-3 shadow-soft">
-        <PlaybackControls playback={playback} />
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-        <div className="flex flex-col gap-5">
-          <div className="overflow-hidden rounded-3xl border-2 bg-code-bg shadow-soft">
-            <div className="flex items-center gap-2 border-b border-code-line/30 px-4 py-3">
-              <span className="h-3 w-3 rounded-full bg-coral" />
-              <span className="h-3 w-3 rounded-full bg-sun" />
-              <span className="h-3 w-3 rounded-full bg-teal" />
-              <span className="ml-3 font-mono text-xs text-code-line">main.py</span>
-            </div>
-            <CodeView code={example.code} activeLine={step.line} className="min-h-64 rounded-none" />
-          </div>
-
-          <div className="rounded-3xl border-2 bg-card shadow-soft">
-            <button
-              onClick={() => setConsoleOpen((o) => !o)}
-              aria-expanded={consoleOpen}
-              className="flex w-full items-center gap-2 px-5 py-3 font-bold"
-            >
-              <Terminal className="h-4 w-4 text-teal" /> Console
-              <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${consoleOpen ? "" : "-rotate-90"}`} />
-            </button>
-            {consoleOpen && (
-              <div className="mx-4 mb-4 min-h-20 rounded-2xl bg-code-bg p-4 font-mono text-sm text-code-fg">
-                {step.output?.length ? (
-                  step.output.map((line, i) => (
-                    <div key={i} className="animate-pop">
-                      <span className="text-teal">›</span> {line}
-                    </div>
-                  ))
-                ) : (
-                  <span className="text-code-line">No output yet…</span>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-5">
-          <div className="relative overflow-hidden rounded-3xl border-2 bg-card p-5 shadow-soft">
-            <div className="pointer-events-none absolute inset-0 bg-hero opacity-60" />
-            <div className="relative">
-              <div className="mb-5 flex flex-wrap items-center gap-2">
-                <h2 className="mr-auto text-xl font-bold">Visualization</h2>
-                {example.visualizations.map((k) => (
-                  <button
-                    key={k}
-                    onClick={() => setChosenKind(k)}
-                    aria-pressed={kind === k}
-                    className={`rounded-full px-3 py-1 text-xs font-bold transition-all ${
-                      kind === k ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {visualizationLabels[k]}
-                  </button>
-                ))}
-              </div>
-              <div className="min-h-56">
-                <ExampleVisualization example={example} step={step} kind={kind} />
-              </div>
-              <div key={`${example.id}-${playback.step}`} className="animate-pop mt-6 flex items-start gap-3 rounded-2xl border-2 border-primary/30 bg-card/80 p-4">
-                <span className="text-2xl" aria-hidden>
-                  💡
-                </span>
-                <p className="font-medium" aria-live="polite">
-                  {step.note}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border-2 bg-card p-5 shadow-soft">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-bold">Variables</h3>
-              <TypeLegend />
-            </div>
-            <VariablesPanel vars={step.vars} highlight={step.highlight} />
-          </div>
-        </div>
-      </div>
+      {/* Keyed so switching examples starts fresh (step 1, default view). */}
+      <WalkthroughPlayer key={example.id} walkthrough={example} playLabel="Run demo" header={picker} />
     </div>
   );
 }

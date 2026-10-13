@@ -29,8 +29,8 @@ src/
     course/                     CourseCard, CourseProgress, CourseSidebar, theme
     lesson/                     LessonLayout, LessonHeader, LessonBody (+ blocks),
                                 CodeExample, QuestionActivity, PracticeActivity,
-                                LessonNavigation, AssistantPanel, WalkthroughView,
-                                RelatedReferences, RichTextView
+                                LessonNavigation, AssistantPanel, RelatedReferences, RichTextView
+    walkthrough/                WalkthroughPlayer (shared by lessons and the playground)
     Drawer.tsx, CodeView.tsx, PlaybackControls.tsx, SiteHeader.tsx
   types/                        Python values, trace steps, walkthroughs, if-chains
   visualizations/               existing visual components (variables, flow tree, loops…)
@@ -81,7 +81,6 @@ problem, so broken content never ships.
 | `/courses` | `routes/courses.index.tsx` | course dashboard |
 | `/courses/:courseId` | `routes/courses.$courseId.index.tsx` | redirects to the last visited lesson (at the last activity) or the first published lesson; Coming Soon courses render a friendly page |
 | `/courses/:courseId/:lessonId` | `routes/courses.$courseId.$lessonId.tsx` | **every** lesson, rendered from its content |
-| `…?walkthrough=<id>` | same route | opens that code example's walkthrough over the lesson |
 | `/playground` | `routes/playground.tsx` | the existing demo player |
 
 Unknown courses, unknown lessons, drafts and lessons of unpublished courses all show not-found.
@@ -96,10 +95,10 @@ LessonLayout
 ├─ left:   CourseSidebar        chapters, lessons, current + completed marks, progress
 ├─ center: LessonHeader         chapter, title, objectives
 │          LessonBody           sections → blocks (RichTextView, CodeExample, QuestionActivity…)
+│                               CodeExample expands into a WalkthroughPlayer in place
 │          RelatedReferences    "Look it up"
 │          LessonNavigation     Mark complete, Previous / Next
 └─ right:  AssistantPanel       Ask Glow (visual shell)
-WalkthroughView                 when ?walkthrough= is set
 ```
 
 **Layout:** from 1280px the page is three columns. Each side panel independently collapses to a
@@ -116,7 +115,8 @@ Stored per course id (`src/progress/progress.ts`):
 ```
 
 - Opening a lesson updates `lastLessonId` / `lastVisitedAt`. It never completes it.
-- Answering a question or opening a practice hint/solution records `lastActivity`.
+- Answering a question, opening a practice hint/solution, or opening a walkthrough records
+  `lastActivity`.
 - Completion is explicit ("Mark lesson complete") and keeps its first timestamp when revisited.
 - Percentages count **published lessons only**. Completed ids for lessons that are unpublished
   or not added yet are kept, never erased, and simply don't count.
@@ -154,11 +154,18 @@ Design rules that keep this extensible without a giant schema:
 - Visualization components live in `src/visualizations/` and receive data; they never contain
   lesson content.
 
-`WalkthroughView` is the shared read-only player: code with line numbers and the current line
-highlighted on the left, visualization + explanation + console on the right, and Previous / Next /
-Reset (plus arrow keys). No editing, no Run button. Opening it pushes `?walkthrough=<id>` without
-scrolling, so the lesson underneath keeps its reading position; closing (button, Escape or browser
-Back) returns to exactly the same place and refocuses the button that opened it.
+`WalkthroughPlayer` (`src/components/walkthrough/`) is the one read-only player, used by both
+the playground and lessons: Play / Pause, Previous / Next / Restart and speed on top; code with
+line numbers and the current line highlighted, plus the console, on the left; the visualization,
+the evaluation chain and the explanation on the right; a variables card under non-variable views.
+Arrow keys step through. It never edits or runs code.
+
+In a lesson, "Walk through code" expands the player **inside the page**, in place of the snippet,
+so the reading position never moves. It breaks out of the ~68ch text width to use the whole
+reading column (`.breakout`, sized with container query units). The player lays itself out by
+its own width (a CSS container query), not the window's: side by side when it has at least
+40rem, otherwise stacked as code → visualization → console. "Close" collapses it and returns
+focus to the button that opened it.
 
 The playground (`/playground`, `src/data/examples.ts`) keeps the existing demos (variables,
 if/else, elif, and/or, loop, lists, functions). They already use the `Walkthrough` shape, so they

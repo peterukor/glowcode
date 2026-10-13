@@ -40,7 +40,8 @@ src/
   progress/       student progress: pure logic, versioned storage, React hooks
   references/     reference / glossary entries and the inline term tooltip
   routes/         pages: /, /courses, /courses/:course, /courses/:course/:lesson, /playground
-  components/     course/ (cards, sidebar), lesson/ (layout, blocks, walkthrough, Ask Glow), shared UI
+  components/     course/ (cards, sidebar), lesson/ (layout, blocks, Ask Glow),
+                  walkthrough/ (the step-by-step player shared with the playground), shared UI
   visualizations/ variable boxes, conditional flow tree, loops, lists, functions
   types/          Python values, walkthrough and trace-step contracts
   data/           playground demo walkthroughs
@@ -62,5 +63,9 @@ wrong answer keys and walkthrough steps that point at missing lines.
 Neither needs a new page, route or component.
 
 **Walkthroughs:** attach `walkthrough: { id, title, language, code, visualizations, steps }` to a
-code block and the lesson gets a "Walk through code" button. Verify every step by hand: the
-walkthrough must show exactly what Python does.
+code block and the lesson gets a "Walk through code" button that opens the step-by-step player
+right there in the lesson. Verify every step by hand: the walkthrough must show exactly what
+Python does.
+
+**Who can add content:** courses and lessons live in this repository, so only people who can
+change the code and deploy can add or edit them. There is no in-app editor for students.

@@ -52,7 +52,7 @@ export function LessonLayout({
       </aside>
 
       {/* CENTER: the reading column */}
-      <div className="min-w-0">
+      <div className="lesson-center min-w-0">
         <div className="sticky top-16 z-20 flex items-center gap-2 border-b bg-background/85 px-4 py-2 backdrop-blur-lg xl:hidden">
           <button type="button" className="btn-chip" onClick={() => setDrawer("contents")} aria-haspopup="dialog">
             <BookOpen className="h-4 w-4" aria-hidden /> Contents

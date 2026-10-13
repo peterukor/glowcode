@@ -11,7 +11,7 @@ export type AssistantContext = {
   lessonId: string;
   lessonTitle: string;
   objectives: string[];
-  /** Set when the student asks from inside a code walkthrough. */
+  /** Later: the walkthrough and step a student is looking at when they ask. */
   walkthrough?: { id: string; code: string; line: number };
 };
 

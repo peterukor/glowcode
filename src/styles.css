@@ -773,8 +773,7 @@
 .drawer[data-side="right"][open] {
   animation-name: drawer-in-right;
 }
-.drawer::backdrop,
-.walkthrough::backdrop {
+.drawer::backdrop {
   background: oklch(0.2 0.04 285 / 0.45);
   backdrop-filter: blur(2px);
 }
@@ -789,33 +788,27 @@
   }
 }
 
-/* The walkthrough opens over the lesson, which stays exactly where it was underneath. */
-.walkthrough {
-  margin: auto;
-  width: min(80rem, 100vw);
-  height: fit-content;
-  max-width: 100vw;
-  max-height: 100dvh;
-  border: 2px solid var(--border);
-  border-radius: 1.5rem;
-  padding: 0;
-  background: var(--background);
-  color: var(--foreground);
-  box-shadow: var(--shadow-soft);
+/* Walkthrough player layout (see WalkthroughPlayer). Sized by its container, not the window. */
+.player-grid {
+  grid-template-areas: "code" "viz" "console";
 }
-.walkthrough[open] {
-  animation: pop-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.1);
-}
-.walkthrough[open] > div {
-  max-height: calc(100dvh - 2rem);
-}
-@media (max-width: 640px) {
-  .walkthrough {
-    width: 100vw;
-    height: 100dvh;
-    border-radius: 0;
-    border: 0;
+@container (min-width: 40rem) {
+  .player-grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-areas: "code viz" "console viz";
+    grid-template-rows: auto 1fr;
   }
+}
+
+/* The lesson's reading column is a size container, so a walkthrough can break out of the
+   ~68ch text width and use the whole column (centered), without depending on the window. */
+.lesson-center {
+  container-type: inline-size;
+}
+.breakout {
+  --breakout: min(72rem, 100cqw - 2rem);
+  width: var(--breakout);
+  margin-inline: calc((100% - var(--breakout)) / 2);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -823,7 +816,7 @@
   .lesson-enter,
   .panel-body,
   .drawer[open],
-  .walkthrough[open],
+  .walkthrough-inline,
   .ref-tip {
     transition: none !important;
     animation: none !important;

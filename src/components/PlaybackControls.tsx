@@ -3,29 +3,29 @@ import type { Playback } from "@/hooks/usePlayback";
 
 const SPEEDS = [0.5, 1, 2];
 
-export function PlaybackControls({ playback: p, compact }: { playback: Playback; compact?: boolean }) {
+export function PlaybackControls({ playback: p, playLabel = "Play" }: { playback: Playback; playLabel?: string }) {
   const iconButton =
     "grid h-10 w-10 place-items-center rounded-full border-2 bg-card transition-all hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40";
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button onClick={p.toggle} className="btn-primary !px-5 !py-2">
+      <button type="button" onClick={p.toggle} className="btn-primary !px-5 !py-2">
         {p.playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-        {p.playing ? "Pause" : "Run demo"}
+        {p.playing ? "Pause" : playLabel}
       </button>
-      <button onClick={p.prev} disabled={p.step === 0} className={iconButton} aria-label="Previous step">
+      <button type="button" onClick={p.prev} disabled={p.step === 0} className={iconButton} aria-label="Previous step">
         <ChevronLeft className="h-4 w-4" />
       </button>
-      <button onClick={p.next} disabled={p.step === p.total - 1} className={iconButton} aria-label="Next step">
+      <button type="button" onClick={p.next} disabled={p.step === p.total - 1} className={iconButton} aria-label="Next step">
         <ChevronRight className="h-4 w-4" />
       </button>
-      <button onClick={p.reset} className={iconButton} aria-label="Restart">
+      <button type="button" onClick={p.reset} className={iconButton} aria-label="Restart">
         <RotateCcw className="h-4 w-4" />
       </button>
-      {!compact && (
-        <div className="flex items-center gap-1 rounded-full border-2 bg-card p-1" role="group" aria-label="Playback speed">
+      <div className="flex items-center gap-1 rounded-full border-2 bg-card p-1" role="group" aria-label="Playback speed">
           {SPEEDS.map((v) => (
             <button
               key={v}
+              type="button"
               onClick={() => p.setSpeed(v)}
               aria-pressed={p.speed === v}
               className={`rounded-full px-3 py-1 text-xs font-bold ${p.speed === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
@@ -33,8 +33,7 @@ export function PlaybackControls({ playback: p, compact }: { playback: Playback;
               {v}×
             </button>
           ))}
-        </div>
-      )}
+      </div>
       <div className="ml-auto flex min-w-40 items-center gap-3">
         <span className="font-mono text-xs font-bold text-muted-foreground">
           Step {p.step + 1}/{p.total}
