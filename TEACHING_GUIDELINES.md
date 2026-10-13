@@ -28,6 +28,11 @@ They are **not** section headings, and short lessons can merge several into one 
 A lesson that skips straight from concept to practice usually leaves students able to copy
 code but not to explain it.
 
+Inside that journey, the loop students repeat is **learn → predict → visualize → understand
+→ practice**. Activities sit between explanations, not in a block at the end: explain an idea,
+show the code, ask what it will do, let the walkthrough show it happening, explain the result,
+then ask the student to use it in a new situation.
+
 ## 1. Introduce concepts through realistic problems
 
 Open with something the student has seen or could imagine building, before any terminology.
@@ -173,6 +178,12 @@ struggle to show it:
 
 Don't fake a visualization. If the walkthrough player can't yet show something (like the call
 stack), explain it in text instead.
+
+**Predictions inside walkthroughs.** A walkthrough can stop before a step and ask the student
+to predict it. Use this at the moment the idea turns on: the value after a reassignment, the
+branch an `if` takes, what a function gives back. One or two per walkthrough; a question on
+every step turns watching into a test. The question must not give away the step it asks about,
+and it shouldn't repeat a question the lesson asks elsewhere.
 
 ## 13. Avoiding unnecessary repetition
 

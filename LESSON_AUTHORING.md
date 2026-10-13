@@ -114,17 +114,73 @@ const birthday: Walkthrough = { id: "py-birthday", title: "…", language: "pyth
 { type: "code", language: "python", code: birthday.code, output: ["13", "14"], walkthrough: birthday }
 ```
 
-Each step records the **state after** that step:
+Each step is one **execution event** and records the **state after** it:
 
 - `line`: the 1-indexed line running. A line can take several steps (`age = age + 1` takes
-  two: working out the right side, then the assignment).
+  two: working out the right side, then the assignment), and a loop revisits the same line.
 - `vars`: every variable after the step. `highlight` names the one that changed.
 - `output`: everything printed **so far**, not just this step.
-- `evaluation`: optional stages of an expression, like `["age + 1", "13 + 1", "14"]`.
-- `returned`: optional value a function handed back, drawn apart from printed output.
 - `note`: one or two short sentences on what happened.
 
-Check every step by hand against a real run. The player shows exactly what you write.
+Optional extras draw more detail. Use them where they help the lesson, not on every step.
+
+**`calc`** splits an assignment that calculates something into two events on the same line.
+While calculating, `vars` still holds the old value; only the assign step changes it:
+
+```ts
+{ line: 3, vars: { age: int(13) }, calc: { target: "age", parts: [{ code: "age", value: "13" }, { code: "+" }, { code: "1" }], result: "14", phase: "calculate" }, note: "…" },
+{ line: 3, vars: { age: int(14) }, calc: { target: "age", parts: [/* same */], result: "14", phase: "assign" }, note: "…" },
+```
+
+**`call`** draws a function call as inputs → function → what comes out. Returned values,
+printed output and changes to an object are separate slots; leave out the ones that don't
+apply (or that the lesson isn't ready for, like `print()` returning `None` in a first lesson).
+Phases: `call` (arguments go in), `run` (the body runs), `result` (outputs appear),
+`assign` (the returned value is stored in `assignTo`). Results show as `?` until `result`.
+
+```ts
+{ line: 2, vars: { word: str("cat") }, call: { name: "len", args: ['"cat"'], returns: "3", assignTo: "length", phase: "result" }, note: "…" }
+{ line: 3, vars: { … }, output: ["3"], call: { name: "print", args: ["3"], prints: ["3"], phase: "result" }, note: "…" }
+{ … call: { name: "append", receiver: "items", args: ['"apple"'], changes: '["apple"]', returns: "None", phase: "result" } }
+```
+
+For the `function` view, list `"function"` in `visualizations`. For loops, set `loopItems` on
+the walkthrough and `loopIndex` on each step (a value equal to the number of items means the
+loop has ended). For if/elif/else, set `ifChain` on the walkthrough and on each step; see the
+playground examples in `src/data/examples.ts`.
+
+**`checkpoint`** asks for a prediction **before** a step is shown. The player stops on the
+previous step and Next waits until the student answers (or chooses to skip):
+
+```ts
+{
+  line: 3,
+  vars: { age: int(13) },
+  calc: { /* … */ phase: "calculate" },
+  note: "Right side first…",
+  checkpoint: {
+    prompt: "Line 3 is `age = age + 1`. What does Python do **first**?",
+    choices: [
+      { id: "calculate", text: "Works out `age + 1`, using the value `age` refers to now" },
+      { id: "store", text: "Makes `age` refer to 14 straight away", feedback: "Python can't store a value it hasn't worked out yet…" },
+    ],
+    answer: "calculate",
+    explanation: "Right side first. Python looks up `age` (13)…",
+  },
+}
+```
+
+- Put a checkpoint on the step whose result is worth predicting: a reassignment, the branch an
+  `if` takes, what a function gives back. One or two per walkthrough is plenty.
+- The prompt can only use what the student can already see. Don't mention values from the
+  step being predicted.
+- Wrong choices get `feedback` about the misunderstanding, as in lesson questions. The
+  `explanation` appears with the revealed step whatever the student chose.
+- The first step can't have a checkpoint (there's nothing before it to pause on).
+- Mention the prediction in the code block's caption so students know to open the walkthrough.
+
+Check every step by hand, then run `bun run check:python` (see section 11). The player shows
+exactly what you write.
 
 ## 7. Prediction and debugging activities
 
@@ -207,17 +263,23 @@ the teaching guidelines. A course that isn't `published` hides all its lessons.
 ## 11. Validating the lesson
 
 ```
-bun run test        # includes validateCourses: ids, references, answers, walkthroughs
-bun run typecheck   # the lesson matches the content types
+bun run test          # includes validateCourses: ids, references, answers, walkthroughs
+bun run check:python  # runs every example in real Python and compares the results
+bun run typecheck     # the lesson matches the content types
 bun run lint
-bun run dev         # read it in the browser, on a narrow window too
+bun run dev           # read it in the browser, on a narrow window too
 ```
 
 `validateCourses` (in `src/courses/queries.ts`) fails the test run on duplicate or badly
 formed ids, unknown reference ids, an `answer` that isn't one of the choices, duplicate choice
 ids, highlighted lines that don't exist, walkthrough code that differs from the code shown, and
-walkthrough steps on lines that don't exist. It can't check that your explanations are right.
-Run the code yourself.
+walkthrough problems (steps on lines that don't exist, printed output that disappears between
+steps, predictions without a right answer).
+
+`check:python` (in `scripts/check-python.ts`, also run by CI) runs your code in `python3` and
+fails if a code block's `output`, a walkthrough's final output or variables, a debug
+question's `errorOutput`, or a predict question's answer doesn't match what Python actually
+does. Neither check can tell whether your explanations are right; that part is your job.
 
 ## A complete example
 

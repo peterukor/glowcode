@@ -150,7 +150,7 @@ A code example opts in with `walkthrough: Walkthrough` (`src/types/trace.ts`):
 
 ```ts
 Walkthrough = { id, title, language, code, visualizations: VisualizationKind[], steps: TraceStep[], ifChain? }
-TraceStep   = { line, vars, output?, note, highlight?, evaluation?, returned?, loopIndex?, ifChain? }
+TraceStep   = { line, vars, output?, note, highlight?, evaluation?, returned?, loopIndex?, ifChain?, calc?, call?, checkpoint? }
 ```
 
 Design rules that keep this extensible without a giant schema:
@@ -162,12 +162,19 @@ Design rules that keep this extensible without a giant schema:
   flow tree already works this way (`ifChain` structure on the walkthrough + `ifChain` results
   on each step, including short-circuited comparisons). Function-call diagrams (arguments →
   name → return / printed / mutated / `None`) and loop iteration views should follow the same
-  pattern: e.g. `call?: { name, args, returned?, printed?, mutated? }` on the step.
+  pattern. `calc` (old value → operation → result → assignment) and `call` (inputs →
+  function → returns / prints / changes → stored in) are drawn by `CalculationView` and
+  `FunctionView`; the conditional flow uses `ifChain`; loops use `loopItems` + `loopIndex`.
+- **Predictions are data, not a separate player.** A step's `checkpoint` makes the player
+  stop on the previous step (`usePlayback`'s `isBlocked`), ask, and reveal on request.
+  Answers live in the player's state while it's open; they aren't saved to progress.
+- **Diagrams keep their shape.** Within one call, calculation or if-chain, every part is
+  drawn from the first step; steps only change what glows (`data-on` / `data-look`).
 - Visualization components live in `src/visualizations/` and receive data; they never contain
   lesson content.
 
 `WalkthroughPlayer` (`src/components/walkthrough/`) is the one read-only player, used by both
-the playground and lessons: Play / Pause, Previous / Next / Restart and speed on top; code with
+the playground and lessons: Previous / Next / Reset first, optional autoplay and speed; code with
 line numbers, the current line highlighted and its position ("Running line 3 · same line,
 next step"), plus the printed output, on the left; a value a step returns (`returned`) is shown
 as its own "Returned" chip, never mixed into printed output; the visualization,
@@ -184,6 +191,15 @@ focus to the button that opened it.
 The playground (`/playground`, `src/data/examples.ts`) keeps the existing demos (variables,
 if/else, elif, and/or, loop, lists, functions). They already use the `Walkthrough` shape, so they
 can move into lessons as those lessons are written.
+
+### Not supported yet
+
+These need new data or views, so walkthroughs explain them in the note text instead of drawing
+them: nested calls (`print(len(word))` as one diagram), a call stack for functions that call
+functions, `while` loops in the loop view (it shows `for` laps over known items), objects
+shared between two names (aliasing of lists), and the collections view still reads a few
+demo-specific details. The diagrams also don't animate values travelling along arrows; parts
+light up instead.
 
 ## Manual / reference integration
 

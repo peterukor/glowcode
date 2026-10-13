@@ -57,7 +57,9 @@ step, is in [LESSON_AUTHORING.md](LESSON_AUTHORING.md).
 `src/courses/<course>/chapters/<chapter>/lessons/<lesson-id>.ts`, add it to that chapter's
 `lessons` array, keep it `draft` while writing, then publish it.
 Run `bun run test`; the content validator catches duplicate ids, broken reference links,
-wrong answer keys and walkthrough steps that point at missing lines.
+wrong answer keys and broken walkthroughs. Then run `bun run check:python`, which runs every
+example in real Python (needs `python3`) and checks the output, variables and error messages
+match what the lesson shows. CI runs both.
 
 **Add a course:** create `src/courses/<course-id>/course.ts` and add it to
 `src/courses/registry.ts`.
