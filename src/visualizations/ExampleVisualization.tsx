@@ -5,14 +5,6 @@ import { LoopView } from "./LoopView";
 import { ListView, StringView } from "./SequenceViews";
 import { VariablesPanel } from "./VariableBox";
 
-export const visualizationLabels: Record<VisualizationKind, string> = {
-  variables: "Variables",
-  flow: "Flow",
-  collections: "Collections",
-  loop: "Loop",
-  function: "Function",
-};
-
 /**
  * Picks the right visualization for an example at one step.
  * The loop / function / collections views still read a few demo-specific details;

@@ -4,7 +4,8 @@ import { CodeView } from "@/components/CodeView";
 import { PlaybackControls } from "@/components/PlaybackControls";
 import { usePlayback } from "@/hooks/usePlayback";
 import type { VisualizationKind, Walkthrough } from "@/types/trace";
-import { ExampleVisualization, visualizationLabels } from "@/visualizations/ExampleVisualization";
+import { ExampleVisualization } from "@/visualizations/ExampleVisualization";
+import { visualizationLabels } from "@/visualizations/labels";
 import { TypeLegend, VariablesPanel } from "@/visualizations/VariableBox";
 
 /**
