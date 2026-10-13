@@ -1,8 +1,8 @@
 name: CI
 
 on:
+  # Every branch, so feature work is checked before it reaches main.
   push:
-    branches: [main]
   pull_request:
 
 permissions:
@@ -28,6 +28,9 @@ jobs:
 
       - name: Type-check
         run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
 
       - name: Unit tests
         run: bun run test
