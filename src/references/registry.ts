@@ -8,7 +8,7 @@
  * Methods live under their type (python.types.list.append), matching the manual's tree.
  */
 
-export type ReferenceCategory = "concept" | "keyword" | "data-type" | "operator" | "built-in" | "method";
+export type ReferenceCategory = "concept" | "keyword" | "data-type" | "operator" | "built-in" | "method" | "error";
 
 export type ReferenceEntry = {
   id: string;
@@ -24,6 +24,18 @@ const entries = [
     title: "Program",
     category: "concept",
     summary: "A list of instructions, written in a programming language, that a computer carries out in order.",
+  },
+  {
+    id: "concept.programming-language",
+    title: "Programming language",
+    category: "concept",
+    summary: "A precise written language for instructions that both people and computers can read. Python and Java are programming languages.",
+  },
+  {
+    id: "concept.interpreter",
+    title: "Interpreter",
+    category: "concept",
+    summary: "The program that reads your Python code and carries it out, one instruction at a time, from the top.",
   },
   {
     id: "concept.variable",
@@ -60,6 +72,12 @@ const entries = [
     title: "str",
     category: "data-type",
     summary: "Text, written inside quotes like \"Ada\". Short for string: a string of characters.",
+  },
+  {
+    id: "python.errors.NameError",
+    title: "NameError",
+    category: "error",
+    summary: "Python stopped because the code used a name it doesn't know. Usually a typo, a capital letter, or a variable used before it was created.",
   },
 ] as const satisfies readonly ReferenceEntry[];
 
