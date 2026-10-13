@@ -10,8 +10,9 @@ describe("routing", () => {
   it.each([
     ["/", "/"],
     ["/playground", "/playground"],
-    ["/lessons", "/lessons/"],
-    ["/lessons/variables", "/lessons/$slug"],
+    ["/courses", "/courses/"],
+    ["/courses/python-fundamentals", "/courses/$courseId/"],
+    ["/courses/python-fundamentals/what-is-programming", "/courses/$courseId/$lessonId"],
   ])("%s renders a real page", (path, routeId) => {
     expect(leafRoute(path)).toBe(routeId);
   });

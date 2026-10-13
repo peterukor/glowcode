@@ -137,8 +137,8 @@ function Index() {
             </h1>
             <p className="mt-6 max-w-lg text-lg text-muted-foreground">Write real Python and see every variable, loop and decision animate in front of you — step by step.</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/playground" className="btn-primary"><Play className="h-4 w-4" /> Start coding</Link>
-              <Link to="/lessons" className="btn-ghost"><BookOpen className="h-4 w-4" /> Explore lessons</Link>
+              <Link to="/courses" className="btn-primary"><Play className="h-4 w-4" /> Start learning</Link>
+              <Link to="/playground" className="btn-ghost"><BookOpen className="h-4 w-4" /> Try the playground</Link>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import type { Example, TraceStep, VisualizationKind } from "@/types/trace";
+import type { TraceStep, VisualizationKind, Walkthrough } from "@/types/trace";
 import { ConditionalFlow, FlowLegend } from "./conditional/ConditionalFlow";
 import { FunctionView, type FunctionStage } from "./FunctionView";
 import { LoopView } from "./LoopView";
@@ -18,7 +18,7 @@ export const visualizationLabels: Record<VisualizationKind, string> = {
  * The loop / function / collections views still read a few demo-specific details;
  * they move into the trace format once those views get the same treatment as `flow`.
  */
-export function ExampleVisualization({ example, step, kind }: { example: Example; step: TraceStep; kind: VisualizationKind }) {
+export function ExampleVisualization({ example, step, kind }: { example: Walkthrough; step: TraceStep; kind: VisualizationKind }) {
   const vars = step.vars;
 
   switch (kind) {

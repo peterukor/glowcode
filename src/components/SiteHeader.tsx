@@ -31,11 +31,11 @@ export function SiteHeader() {
           <img src="/brand/glowcode-wordmark.png" alt="Glowcode" className="hidden h-9 w-auto sm:block" />
         </Link>
         <nav className="flex items-center gap-1">
+          <Link to="/courses" className={link} activeProps={active}>
+            Courses
+          </Link>
           <Link to="/playground" className={link} activeProps={active}>
             Playground
-          </Link>
-          <Link to="/lessons" className={link} activeProps={active}>
-            Lessons
           </Link>
           <button
             onClick={toggle}

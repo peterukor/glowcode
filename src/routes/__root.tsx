@@ -13,8 +13,11 @@ function RootLayout() {
     <>
       {/* Applies each route's `head` (title, description) to the document. */}
       <HeadContent />
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
       <SiteHeader />
-      <main>
+      <main id="main-content" tabIndex={-1} className="outline-none">
         <Outlet />
       </main>
     </>

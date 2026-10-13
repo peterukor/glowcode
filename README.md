@@ -1,13 +1,19 @@
 # Glowcode
 
-A visual Python playground for beginners. Students step through small programs and watch
-variables, decisions, loops, lists and functions animate one line at a time.
+An interactive, visual-first platform that teaches complete beginners to program and to think
+like programmers. Students read short, friendly lessons, answer prediction and debugging
+questions, and step through code walkthroughs that show what every line does.
 
-Today every program replays a hand-written demo trace. Real Python execution, step-by-step
-tracing and more languages (Java) are planned; the code is organized so they slot in without
-touching the visualizations.
+Courses are independent and grow alongside a live bootcamp:
 
-## Run it
+| Course | Status |
+| --- | --- |
+| Python Fundamentals | Active (2 sample lessons) |
+| Version Control with Git & GitHub | Coming soon |
+| Computer Fundamentals | Coming soon |
+| Java Fundamentals | Coming soon |
+
+## Setup
 
 ```sh
 bun install      # or npm install
@@ -16,64 +22,45 @@ bun run dev      # http://localhost:5173
 
 | Script | What it does |
 | --- | --- |
-| `dev` | Start the dev server |
-| `build` | Type-check, then build to `dist/` (a static site, host it anywhere) |
+| `dev` | Start the dev server (also regenerates `src/routeTree.gen.ts`) |
+| `build` | Type-check, then build a static site into `dist/` |
 | `preview` | Serve the production build locally |
-| `test` | Run the unit tests (Vitest) |
+| `test` | Unit tests (Vitest): content validation, progress, navigation, flow tree, routing |
 | `typecheck` / `lint` / `format` | TypeScript, ESLint, Prettier |
 
-Stack: React 19, Vite, TanStack Router (file-based routes), Tailwind CSS v4, lucide icons.
-No backend.
+Stack: React 19, Vite, TanStack Router (file routes), Tailwind CSS v4, lucide icons. No backend,
+no database, no accounts: progress is saved in the browser. When hosting, serve `index.html` for
+unknown paths so deep links like `/courses/python-fundamentals/why-variables-exist` work.
 
-## Project layout
+## Structure
 
 ```
 src/
-  main.tsx                 app entry: creates the router
-  routes/                  one file per page (TanStack file routes)
-  components/              app UI: header, code viewer, playback controls
-  hooks/usePlayback.ts     play / pause / step / speed over a trace
-  data/
-    examples.ts            demo programs + their hand-written traces
-    lessons.ts             the lesson path
-  types/
-    python.ts              Python values (int, str, list, ...)
-    trace.ts               TraceStep / Example: the contract a tracer must produce
-    conditional.ts         if / elif / else structure + its per-step trace
-  visualizations/
-    ExampleVisualization.tsx   picks the right view for an example
-    VariableBox.tsx            compact, color-coded variable boxes
-    SequenceViews.tsx          lists and strings
-    LoopView.tsx, FunctionView.tsx
-    conditional/
-      state.ts             Python's rules: evaluate and/or (with short-circuit), which branch runs
-      layout.ts            pure geometry: boxes and connector paths for the flow tree
-      ConditionalFlow.tsx  renders layout + state as SVG; styles live in styles.css (.flow)
-  styles.css               design tokens, utilities, variable-box and flow-tree styles
+  courses/        course content (TypeScript) + registry + validation
+  progress/       student progress: pure logic, versioned storage, React hooks
+  references/     reference / glossary entries and the inline term tooltip
+  routes/         pages: /, /courses, /courses/:course, /courses/:course/:lesson, /playground
+  components/     course/ (cards, sidebar), lesson/ (layout, blocks, walkthrough, Ask Glow), shared UI
+  visualizations/ variable boxes, conditional flow tree, loops, lists, functions
+  types/          Python values, walkthrough and trace-step contracts
+  data/           playground demo walkthroughs
 ```
 
-## How the conditional flow tree works
+The full explanation is in [GLOWCODE_ARCHITECTURE.md](GLOWCODE_ARCHITECTURE.md). How lessons
+should be written is in [TEACHING_GUIDELINES.md](TEACHING_GUIDELINES.md).
 
-An `if / elif / else` chain is drawn as one connected tree:
+## Development workflow
 
-- each `if` / `elif` is a frame with a keyword tab; a single comparison sits inside it, while
-  `and` / `or` conditions show each comparison as its own box feeding into an operator node
-- every decision splits into a **True** line (to its block) and a **False** line (to the next
-  `elif`, the `else`, or straight past the chain)
-- all paths meet again at the first line after the chain
+**Add a lesson:** create `src/courses/<course>/chapters/<chapter>/lessons/<lesson-id>.ts`,
+add it to that chapter's `lessons` array, keep it `draft` while writing, then publish it.
+Run `bun run test`; the content validator catches duplicate ids, broken reference links,
+wrong answer keys and walkthrough steps that point at missing lines.
 
-Three layers keep it simple to change:
+**Add a course:** create `src/courses/<course-id>/course.ts` and add it to
+`src/courses/registry.ts`.
 
-1. **Structure** (`IfChain` in `types/conditional.ts`): what the code looks like.
-2. **Trace** (`IfChainTrace`): which comparisons Python evaluated and where it is now. Missing
-   results mean "not evaluated", so short-circuiting shows up as skipped boxes for free.
-3. **Derived state** (`state.ts`) → **looks** (`ConditionalFlow.tsx`): `idle`, `true`, `false`,
-   `lit` (the path Python took, glowing) and `dim` (skipped). The CSS for each look is in
-   `styles.css` under `.flow`.
+Neither needs a new page, route or component.
 
-## Adding a real tracer later
-
-A tracer (Pyodide in the browser, or a server for Java) only has to output `TraceStep[]`
-from `types/trace.ts`. For `if` statements it also reports the `IfChain` structure, which can
-be built from Python's `ast` module (`If`, `BoolOp`, `Compare` nodes), and the comparison
-results per step. Nothing in `visualizations/` needs to change.
+**Walkthroughs:** attach `walkthrough: { id, title, language, code, visualizations, steps }` to a
+code block and the lesson gets a "Walk through code" button. Verify every step by hand: the
+walkthrough must show exactly what Python does.
