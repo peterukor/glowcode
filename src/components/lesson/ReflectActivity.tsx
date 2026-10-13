@@ -1,5 +1,5 @@
 import { MessageCircleQuestion } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { CodeView } from "@/components/CodeView";
 import type { ReflectBlock } from "@/courses/types";
 import { RichTextView } from "./RichTextView";
@@ -12,6 +12,7 @@ import { RichTextView } from "./RichTextView";
 export function ReflectActivity({ block, onAttempt }: { block: ReflectBlock; onAttempt: (activityId: string) => void }) {
   const [open, setOpen] = useState(false);
   const answerId = useId();
+  const recorded = useRef(false);
 
   return (
     <section id={`activity-${block.id}`} className="activity reflect my-8 rounded-3xl border-2 border-grape/30 bg-grape/5 p-5">
@@ -31,7 +32,11 @@ export function ReflectActivity({ block, onAttempt }: { block: ReflectBlock; onA
         aria-expanded={open}
         aria-controls={answerId}
         onClick={() => {
-          if (!open) onAttempt(block.id);
+          // Record the first reveal only; reopening isn't new work.
+          if (!recorded.current) {
+            recorded.current = true;
+            onAttempt(block.id);
+          }
           setOpen((o) => !o);
         }}
       >
