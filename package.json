@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check:python": "bun scripts/check-python.ts"
   },
   "dependencies": {
     "@tanstack/react-router": "1.170.41",

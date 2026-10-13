@@ -19,6 +19,11 @@ export default tseslint.config(
     },
   },
   {
+    // Build and content-check scripts run in Node / Bun, not the browser.
+    files: ["scripts/**/*.ts"],
+    languageOptions: { globals: globals.node },
+  },
+  {
     // TanStack route files export `Route` next to their components by design; the router
     // plugin handles hot reloading for them.
     files: ["src/routes/**/*.tsx"],
