@@ -54,10 +54,21 @@ src/
 
   A course that isn't `published` has no openable lessons, whatever its lessons say.
 
-- **Blocks** a lesson can use: `text`, `list`, `callout` (tones: real-world, tip, mindset,
-  careful, other-languages), `code` (optional output + walkthrough), `figure` (an existing
-  visualization used as a diagram), `question` (predict or debug), `practice`.
-  Activities (`question`, `practice`) carry ids unique within their lesson.
+- **Blocks** a lesson can use:
+  - `text`, `list`
+  - `callout` with a tone: real-world, execution, mindset, tip, careful, other-languages
+  - `code`: read-only snippet with language label, line numbers, optional `highlightLines`,
+    caption, printed `output` and `walkthrough`
+  - `figure`: a static illustration (`variables` boxes, `names` pointing at values, or a
+    `sequence` of steps)
+  - `question` (predict or debug): per-choice feedback, optional hint and `errorOutput`,
+    retry, and an explanation revealed after a correct answer or on request
+  - `reflect`: an open "think it through" prompt with a model explanation to compare with
+  - `practice`: goal, context, self-check list, progressive hints, a gated sample solution,
+    the reasoning behind it and alternative approaches. Nothing is run or auto-checked.
+
+  Activities (`question`, `reflect`, `practice`) carry ids unique within their lesson.
+  Attempting an activity records it for "resume"; only "Mark complete" completes a lesson.
 - **Inline text** uses a tiny markup: `` `code` ``, `**bold**`, `[label](ref:reference.id)`.
   This is the only parsing in the content system; MDX wasn't worth its build complexity yet.
 
@@ -69,7 +80,8 @@ src/
 
 `validateCourses()` reports duplicate ids (courses, chapters, lessons, sections, activities,
 walkthroughs), non-URL-safe ids, unknown reference ids (in `references` or inline text),
-answers that aren't among a question's choices, walkthrough code that differs from the code
+answers that aren't among a question's choices, duplicate choice ids, highlighted lines
+outside the snippet, walkthrough code that differs from the code
 shown, and walkthrough steps pointing at lines that don't exist. The test suite fails on any
 problem, so broken content never ships.
 
@@ -138,7 +150,7 @@ A code example opts in with `walkthrough: Walkthrough` (`src/types/trace.ts`):
 
 ```ts
 Walkthrough = { id, title, language, code, visualizations: VisualizationKind[], steps: TraceStep[], ifChain? }
-TraceStep   = { line, vars, output?, note, highlight?, evaluation?, loopIndex?, ifChain? }
+TraceStep   = { line, vars, output?, note, highlight?, evaluation?, returned?, loopIndex?, ifChain? }
 ```
 
 Design rules that keep this extensible without a giant schema:
@@ -156,7 +168,9 @@ Design rules that keep this extensible without a giant schema:
 
 `WalkthroughPlayer` (`src/components/walkthrough/`) is the one read-only player, used by both
 the playground and lessons: Play / Pause, Previous / Next / Restart and speed on top; code with
-line numbers and the current line highlighted, plus the console, on the left; the visualization,
+line numbers, the current line highlighted and its position ("Running line 3 · same line,
+next step"), plus the printed output, on the left; a value a step returns (`returned`) is shown
+as its own "Returned" chip, never mixed into printed output; the visualization,
 the evaluation chain and the explanation on the right; a variables card under non-variable views.
 Arrow keys step through. It never edits or runs code.
 
@@ -198,11 +212,9 @@ To switch it on later, implement `AskGlow = (question, context) => Promise<strin
 
 ## How to add a chapter or lesson
 
-1. Create `src/courses/<course>/chapters/<chapter-id>/lessons/<lesson-id>.ts` exporting a
-   `Lesson`. Copy an existing lesson for the shape; follow `TEACHING_GUIDELINES.md`.
-2. Add it to its chapter's `lessons` array in `chapter.ts` (create `chapter.ts` for a new chapter
-   and add the chapter to the course's `chapters`).
-3. Start with `status: "draft"` while writing; switch to `"published"` when ready.
-4. Run `bun run test`. `validateCourses` checks ids, references, answers and walkthrough lines.
+See [`LESSON_AUTHORING.md`](./LESSON_AUTHORING.md) for the full guide, with a complete example
+and the four lesson patterns, and [`TEACHING_GUIDELINES.md`](./TEACHING_GUIDELINES.md) for the
+writing standard. In short: create the lesson file, add it to its chapter's `lessons`, keep it
+`draft` while writing, and run `bun run test`.
 
 No new page, route, component or progress change is needed.

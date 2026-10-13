@@ -47,13 +47,15 @@ src/
   data/           playground demo walkthroughs
 ```
 
-The full explanation is in [GLOWCODE_ARCHITECTURE.md](GLOWCODE_ARCHITECTURE.md). How lessons
-should be written is in [TEACHING_GUIDELINES.md](TEACHING_GUIDELINES.md).
+The full explanation is in [GLOWCODE_ARCHITECTURE.md](GLOWCODE_ARCHITECTURE.md). What makes a
+good lesson is in [TEACHING_GUIDELINES.md](TEACHING_GUIDELINES.md), and how to add one, step by
+step, is in [LESSON_AUTHORING.md](LESSON_AUTHORING.md).
 
 ## Development workflow
 
-**Add a lesson:** create `src/courses/<course>/chapters/<chapter>/lessons/<lesson-id>.ts`,
-add it to that chapter's `lessons` array, keep it `draft` while writing, then publish it.
+**Add a lesson:** follow [LESSON_AUTHORING.md](LESSON_AUTHORING.md). In short: create
+`src/courses/<course>/chapters/<chapter>/lessons/<lesson-id>.ts`, add it to that chapter's
+`lessons` array, keep it `draft` while writing, then publish it.
 Run `bun run test`; the content validator catches duplicate ids, broken reference links,
 wrong answer keys and walkthrough steps that point at missing lines.
 
