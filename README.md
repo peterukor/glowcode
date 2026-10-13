@@ -69,3 +69,26 @@ Python does.
 
 **Who can add content:** courses and lessons live in this repository, so only people who can
 change the code and deploy can add or edit them. There is no in-app editor for students.
+
+## Commits and branches
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org): `type: short summary`
+in the imperative, lowercase, no period.
+
+| Type | Use for |
+| --- | --- |
+| `feat` | a new feature students or authors can see |
+| `fix` | a bug fix |
+| `content` | adding or editing course and lesson content |
+| `refactor` | code changes that don't change behavior |
+| `style` | formatting only |
+| `docs` | documentation |
+| `test` | adding or fixing tests |
+| `ci` | GitHub Actions and other automation |
+| `chore` | dependencies, config and other upkeep |
+
+Add a scope when it helps: `feat(playground): add Python tracer`, `content(python): add loops lesson`.
+
+Branches use the same types: `feat/python-tracer`, `fix/sidebar-focus`, `content/python-loops`,
+`chore/update-deps`. Snapshots of past versions live on `release/<version>` branches
+(`release/v0.1.0` is the playground before the courses system).
