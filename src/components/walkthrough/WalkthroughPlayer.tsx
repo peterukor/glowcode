@@ -1,12 +1,14 @@
 import { ChevronDown, Terminal } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CodeView } from "@/components/CodeView";
 import { PlaybackControls } from "@/components/PlaybackControls";
 import { usePlayback } from "@/hooks/usePlayback";
 import type { VisualizationKind, Walkthrough } from "@/types/trace";
+import { CalculationView } from "@/visualizations/CalculationView";
 import { ExampleVisualization } from "@/visualizations/ExampleVisualization";
 import { visualizationLabels } from "@/visualizations/labels";
 import { TypeLegend, VariablesPanel } from "@/visualizations/VariableBox";
+import { CheckpointQuestion, CheckpointRecap, emptyRecord, type CheckpointRecord } from "./WalkthroughCheckpoint";
 
 /**
  * The step-by-step player used by both the playground and lessons:
@@ -15,6 +17,11 @@ import { TypeLegend, VariablesPanel } from "@/visualizations/VariableBox";
  * It sizes itself to its container, not the window: side by side when there's room,
  * stacked when it sits in a narrower column (like a lesson with both panels open).
  * Read-only: it replays predefined, verified steps and never runs code.
+ *
+ * Predictions: a step can carry a `checkpoint`. The player then stops on the step before
+ * it and asks; Next stays disabled until the student reveals the step (after answering, or
+ * by choosing to skip). Answers are remembered while the player is open, so stepping back
+ * and forth never asks again; Reset starts everything over.
  */
 export function WalkthroughPlayer({
   walkthrough,
@@ -28,12 +35,43 @@ export function WalkthroughPlayer({
   /** Optional content above the controls (the playground's example picker). */
   header?: ReactNode;
 }) {
-  const playback = usePlayback(walkthrough.steps.length, walkthrough.id);
+  const steps = walkthrough.steps;
+  const [records, setRecords] = useState<Record<number, CheckpointRecord>>({});
+  const waitingAt = (from: number) => !!steps[from + 1]?.checkpoint && !records[from + 1]?.revealed;
+  const playback = usePlayback(steps.length, walkthrough.id, waitingAt);
   const [chosenKind, setChosenKind] = useState<VisualizationKind | undefined>(walkthrough.visualizations[0]);
   const [consoleOpen, setConsoleOpen] = useState(true);
+  const questionRef = useRef<HTMLHeadingElement>(null);
+  const noteRef = useRef<HTMLDivElement>(null);
+  const [focusNote, setFocusNote] = useState(false);
 
-  const stepIndex = Math.min(playback.step, walkthrough.steps.length - 1);
-  const step = walkthrough.steps[stepIndex]!;
+  // A different program starts with fresh predictions.
+  useEffect(() => setRecords({}), [walkthrough.id]);
+  useEffect(() => {
+    if (!focusNote) return;
+    noteRef.current?.focus();
+    setFocusNote(false);
+  }, [focusNote]);
+
+  const update = (index: number, change: (r: CheckpointRecord) => CheckpointRecord) =>
+    setRecords((all) => ({ ...all, [index]: change(all[index] ?? emptyRecord) }));
+
+  const stepIndex = Math.min(playback.step, steps.length - 1);
+  const step = steps[stepIndex]!;
+  const pendingIndex = playback.blocked ? stepIndex + 1 : undefined;
+  const pending = pendingIndex !== undefined ? steps[pendingIndex]!.checkpoint : undefined;
+  const recap = step.checkpoint && records[stepIndex]?.revealed ? step.checkpoint : undefined;
+
+  const reveal = () => {
+    if (pendingIndex === undefined) return;
+    update(pendingIndex, (r) => ({ ...r, revealed: true }));
+    playback.advance();
+    setFocusNote(true);
+  };
+  const resetAll = () => {
+    setRecords({});
+    playback.reset();
+  };
   const position = linePosition(walkthrough, stepIndex);
   const kind = chosenKind && walkthrough.visualizations.includes(chosenKind) ? chosenKind : walkthrough.visualizations[0];
 
@@ -43,14 +81,17 @@ export function WalkthroughPlayer({
       onKeyDown={(e) => {
         // ← / → step through, unless the student is typing or choosing an option.
         if (e.target instanceof HTMLElement && e.target.closest("input, textarea, [role='tab']")) return;
-        if (e.key === "ArrowRight") playback.next();
+        if (e.key === "ArrowRight") {
+          if (playback.blocked) questionRef.current?.focus();
+          else playback.next();
+        }
         if (e.key === "ArrowLeft") playback.prev();
       }}
     >
       {header}
 
       <div className="mb-5 rounded-3xl border-2 bg-card p-3 shadow-soft">
-        <PlaybackControls playback={playback} playLabel={playLabel} />
+        <PlaybackControls playback={{ ...playback, reset: resetAll }} playLabel={playLabel} />
       </div>
 
       {/* Wide: code and console on the left, visualization on the right.
@@ -121,17 +162,26 @@ export function WalkthroughPlayer({
                   ))}
               </div>
 
-              {step.evaluation && <EvaluationChain stages={step.evaluation} />}
-              {step.returned !== undefined && <ReturnedValue value={step.returned} />}
+              {step.calc ? (
+                <CalculationView calc={step.calc} vars={step.vars} />
+              ) : (
+                step.evaluation && <EvaluationChain stages={step.evaluation} />
+              )}
+              {step.returned !== undefined && !step.call && <ReturnedValue value={step.returned} />}
               {kind ? (
                 <div className="min-h-32">
                   <ExampleVisualization example={walkthrough} step={step} kind={kind} />
                 </div>
               ) : (
-                !step.evaluation && <p className="text-sm text-muted-foreground">Watch the console and the highlighted line.</p>
+                !step.evaluation && !step.calc && <p className="text-sm text-muted-foreground">Watch the printed output and the highlighted line.</p>
               )}
 
-              <div key={playback.step} className="animate-pop mt-6 flex items-start gap-3 rounded-2xl border-2 border-primary/30 bg-card/80 p-4">
+              <div
+                key={playback.step}
+                ref={noteRef}
+                tabIndex={-1}
+                className="animate-pop mt-6 flex items-start gap-3 rounded-2xl border-2 border-primary/30 bg-card/80 p-4 outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
                 <span className="text-2xl" aria-hidden>
                   💡
                 </span>
@@ -139,6 +189,24 @@ export function WalkthroughPlayer({
                   {step.note}
                 </p>
               </div>
+
+              {recap && <CheckpointRecap checkpoint={recap} record={records[stepIndex]!} />}
+              {pending && pendingIndex !== undefined && (
+                <CheckpointQuestion
+                  key={pendingIndex}
+                  ref={questionRef}
+                  checkpoint={pending}
+                  record={records[pendingIndex] ?? emptyRecord}
+                  onCheck={(choiceId) =>
+                    update(pendingIndex, (r) =>
+                      choiceId === pending.answer
+                        ? { ...r, correct: true }
+                        : { ...r, ruledOut: r.ruledOut.includes(choiceId) ? r.ruledOut : [...r.ruledOut, choiceId] },
+                    )
+                  }
+                  onReveal={reveal}
+                />
+              )}
             </div>
           </div>
 

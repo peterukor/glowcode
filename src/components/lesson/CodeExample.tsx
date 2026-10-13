@@ -22,6 +22,7 @@ export function CodeExample({ block, onActivity }: { block: CodeBlock; onActivit
   const wt = block.walkthrough;
   const language = LANGUAGE_LABEL[block.language];
   const lineCount = block.code.split("\n").length;
+  const predictions = wt?.steps.filter((s) => s.checkpoint).length ?? 0;
 
   // Move focus into the walkthrough when it opens, and back to its button when it closes.
   useEffect(() => {
@@ -55,12 +56,17 @@ export function CodeExample({ block, onActivity }: { block: CodeBlock; onActivit
             <span className="h-2.5 w-2.5 rounded-full bg-sun" aria-hidden />
             <span className="h-2.5 w-2.5 rounded-full bg-teal" aria-hidden />
             <span className="ml-2 font-mono text-xs text-code-line">{language}</span>
+            {wt && predictions > 0 && (
+              <span className="ml-auto text-xs font-semibold text-sun">
+                {predictions === 1 ? "Includes a prediction" : `Includes ${predictions} predictions`}
+              </span>
+            )}
             {wt && (
               <button
                 ref={openButton}
                 type="button"
                 id={`open-${wt.id}`}
-                className="btn-walkthrough ml-auto"
+                className={`btn-walkthrough ${predictions > 0 ? "" : "ml-auto"}`}
                 aria-expanded={false}
                 onClick={() => {
                   setOpen(true);

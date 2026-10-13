@@ -1,26 +1,99 @@
-/** 0 = not called yet, 1 = argument goes in, 2 = body runs, 3 = value comes back. */
-export type FunctionStage = 0 | 1 | 2 | 3;
+import type { CallEvent } from "@/types/trace";
 
-/** A function call as input → body → return value. */
-export function FunctionView({ name, input, output, stage }: { name: string; input: string; output: string; stage: FunctionStage }) {
-  const box = (on: boolean) =>
-    `rounded-2xl border-2 p-3 text-center transition-all ${on ? "scale-105 border-primary bg-primary/10" : "border-border bg-card"}`;
+const ORDER: Record<CallEvent["phase"], number> = { call: 0, run: 1, result: 2, assign: 3 };
+
+/**
+ * A call drawn top to bottom: inputs → function → what comes out → (where it's stored).
+ * The diagram keeps the same shape for every phase of one call; parts light up as the
+ * call progresses, and results stay as "?" until Python has produced them.
+ *
+ * What comes out is split into separate slots on purpose:
+ *   Returns  – the value handed back to the code that called it
+ *   Prints   – text shown on the screen
+ *   Changes  – an object the call modified (like a list after append)
+ */
+export function FunctionView({ call }: { call: CallEvent }) {
+  const at = ORDER[call.phase];
+  const done = at >= ORDER.result;
+  const label = `${call.receiver ? `${call.receiver}.` : ""}${call.name}()`;
+
   return (
-    <div className="grid grid-cols-[1fr_auto_1.3fr_auto_1fr] items-center gap-2">
-      <div className={box(stage === 1)}>
-        <div className="text-xs font-bold uppercase text-muted-foreground">input</div>
-        <div className="font-mono text-t-str">{stage >= 1 ? input : "—"}</div>
+    <div className="fn flex flex-col items-center gap-1.5" role="group" aria-label={`Function call: ${label}`}>
+      <div className="fn-node" data-on={at === 0 || undefined}>
+        <p className="fn-caption">{call.receiver ? "Object and argument" : call.args.length === 1 ? "Input" : "Inputs"}</p>
+        <p className="flex flex-wrap justify-center gap-2 font-mono font-bold">
+          {call.receiver && <span>{call.receiver}</span>}
+          {call.args.length ? call.args.map((a, i) => <span key={i}>{a}</span>) : <span className="text-muted-foreground">nothing</span>}
+        </p>
       </div>
-      <span className="text-2xl text-primary">→</span>
-      <div className={box(stage === 2)}>
-        <div className="font-display text-lg font-bold">⚙️ {name}()</div>
-        <div className="text-xs text-muted-foreground">runs the body</div>
+
+      <Arrow on={at <= 1} />
+
+      <div className="fn-node fn-function" data-on={at <= 1 || undefined}>
+        <p className="font-mono text-lg font-extrabold">
+          <span aria-hidden>⚙ </span>
+          {label}
+        </p>
+        {call.phase === "run" && <p className="fn-caption">running…</p>}
       </div>
-      <span className="text-2xl text-primary">→</span>
-      <div className={box(stage === 3)}>
-        <div className="text-xs font-bold uppercase text-muted-foreground">return</div>
-        <div className="font-mono text-t-str">{stage >= 3 ? output : "—"}</div>
+
+      <Arrow on={at === 2} />
+
+      <div className="flex flex-wrap justify-center gap-2">
+        {call.returns !== undefined && (
+          <Slot kind="returns" title="Returns" hint="handed back" value={call.returns} shown={done} on={at === 2 || (at === 3 && !!call.assignTo)} />
+        )}
+        {call.prints && <Slot kind="prints" title="Prints" hint="on screen" value={call.prints.join("\n")} shown={done} on={at === 2} />}
+        {call.changes !== undefined && (
+          <Slot kind="changes" title="Changes" hint={call.receiver ?? "its object"} value={call.changes} shown={done} on={at === 2} />
+        )}
       </div>
+
+      {call.assignTo && (
+        <>
+          <Arrow on={at === 3} />
+          <div className="fn-node" data-on={at === 3 || undefined}>
+            <p className="fn-caption">{at === 3 ? "now refers to the returned value" : "will store the returned value"}</p>
+            <p className="font-mono font-bold">
+              {call.assignTo}
+              {at === 3 && call.returns !== undefined && <span className="font-normal text-muted-foreground"> → {call.returns}</span>}
+            </p>
+          </div>
+        </>
+      )}
+
+      <p className="sr-only">{describe(call, label, done)}</p>
     </div>
   );
+}
+
+function Arrow({ on }: { on: boolean }) {
+  return (
+    <span className="fn-arrow" data-on={on || undefined} aria-hidden>
+      ↓
+    </span>
+  );
+}
+
+function Slot({ kind, title, hint, value, shown, on }: { kind: string; title: string; hint: string; value: string; shown: boolean; on: boolean }) {
+  return (
+    <div className={`fn-slot fn-slot-${kind}`} data-on={on || undefined}>
+      <p className="fn-caption">
+        {title} <span className="font-normal normal-case tracking-normal">({hint})</span>
+      </p>
+      <p className="whitespace-pre font-mono font-bold">{shown ? value : "?"}</p>
+    </div>
+  );
+}
+
+function describe(call: CallEvent, label: string, done: boolean) {
+  const inputs = [call.receiver, ...call.args].filter(Boolean).join(", ") || "nothing";
+  if (!done) return `${label} is called with ${inputs}.`;
+  const parts = [
+    call.returns !== undefined && `returns ${call.returns}`,
+    call.prints && `prints ${call.prints.join(", ")}`,
+    call.changes !== undefined && `changes ${call.receiver ?? "its object"} to ${call.changes}`,
+  ].filter(Boolean);
+  const stored = call.phase === "assign" && call.assignTo ? ` ${call.assignTo} now refers to ${call.returns}.` : "";
+  return `${label} with ${inputs} ${parts.join(" and ")}.${stored}`;
 }

@@ -6,6 +6,7 @@ import { getReference } from "@/references/registry";
 import type { Walkthrough } from "@/types/trace";
 import { referencesIn } from "./richText";
 import type { ActivityBlock, Block, Chapter, Course, Lesson, RichText } from "./types";
+import { validateWalkthrough } from "./validateWalkthrough";
 
 export type LessonEntry = { lesson: Lesson; chapter: Chapter };
 
@@ -89,7 +90,7 @@ function richTextIn(block: Block): RichText[] {
 
 /**
  * Catches content mistakes before students see them: duplicate ids, broken reference
- * links, answers that aren't one of the choices. Run by the test suite.
+ * links, answers that aren't one of the choices, broken walkthroughs. Run by the test suite.
  */
 export function validateCourses(courses: Course[]): string[] {
   const problems: string[] = [];
@@ -143,12 +144,7 @@ export function validateCourses(courses: Course[]): string[] {
           problems.push(`${where}: walkthrough "${block.walkthrough.id}" code differs from the code shown in the lesson`);
         }
         if (block.type === "code" && block.walkthrough) {
-          const lineCount = block.walkthrough.code.split("\n").length;
-          for (const step of block.walkthrough.steps) {
-            if (step.line < 1 || step.line > lineCount) {
-              problems.push(`${where}: walkthrough "${block.walkthrough.id}" points at line ${step.line}, which doesn't exist`);
-            }
-          }
+          problems.push(...validateWalkthrough(block.walkthrough).map((p) => `${where}: ${p}`));
         }
       }
     }
