@@ -47,6 +47,14 @@ describe("progress rules", () => {
     expect(summary.resumeLessonId).toBe("a");
   });
 
+  it("working through activities and walkthroughs is not completing the lesson", () => {
+    let s = visitLesson(emptyProgress(), "py", "a", now);
+    for (const id of ["walkthrough-py-birthday", "predict-score", "reflect-earlier-print"]) s = recordActivity(s, "py", "a", id, later);
+    const summary = summarizeCourse(course([lesson("a"), lesson("b")]), s.courses["py"]);
+    expect(summary.completed).toBe(0);
+    expect(s.courses["py"]!.lastActivity).toEqual({ lessonId: "a", activityId: "reflect-earlier-print" });
+  });
+
   it("keeps lessons completed when revisited, and keeps the first completion time", () => {
     let s = setLessonComplete(emptyProgress(), "py", "a", true, now);
     s = visitLesson(s, "py", "b", later);
