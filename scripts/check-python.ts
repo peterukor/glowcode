@@ -60,7 +60,10 @@ function checkWalkthrough(w: Walkthrough, where: string) {
   checked++;
   const last = w.steps.at(-1)!;
   const r = run(w.code, true);
-  if (!r.ok) return problems.push(`${where}: walkthrough "${w.id}" fails in Python:\n${r.stderr}`);
+  if (!r.ok) {
+    problems.push(`${where}: walkthrough "${w.id}" fails in Python:\n${r.stderr}`);
+    return;
+  }
   const expected = last.output ?? [];
   if (show(r.stdout) !== show(expected)) {
     problems.push(`${where}: walkthrough "${w.id}" prints ${show(r.stdout)}, but its last step shows ${show(expected)}`);
