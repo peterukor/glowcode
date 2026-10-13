@@ -1,45 +1,40 @@
-@import "tailwindcss" source(none);
-@source "../src";
-@import "tw-animate-css";
+@import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------- tokens */
 
 @theme inline {
   --font-display: "Bricolage Grotesque", system-ui, sans-serif;
   --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 14px);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+
   /* brand */
   --color-grape: var(--grape);
   --color-sky: var(--sky);
   --color-teal: var(--teal);
   --color-sun: var(--sun);
   --color-coral: var(--coral);
-  --color-ink: var(--ink);
+  --color-amber: var(--amber);
+
   /* python types */
   --color-t-int: var(--t-int);
   --color-t-float: var(--t-float);
@@ -47,6 +42,7 @@
   --color-t-bool: var(--t-bool);
   --color-t-list: var(--t-list);
   --color-t-none: var(--t-none);
+
   /* code */
   --color-code-bg: var(--code-bg);
   --color-code-fg: var(--code-fg);
@@ -63,35 +59,26 @@
   --radius: 1rem;
   --grape: oklch(0.58 0.22 293);
   --sky: oklch(0.64 0.18 250);
-  --teal: oklch(0.72 0.13 185);
+  --teal: oklch(0.7 0.14 175);
   --sun: oklch(0.86 0.16 88);
-  --coral: oklch(0.7 0.18 28);
-  --ink: oklch(0.2 0.04 280);
+  --coral: oklch(0.68 0.19 25);
+  --amber: oklch(0.74 0.16 60);
 
   --background: oklch(0.985 0.008 290);
   --foreground: oklch(0.22 0.04 280);
   --card: oklch(1 0 0);
-  --card-foreground: var(--foreground);
-  --popover: oklch(1 0 0);
-  --popover-foreground: var(--foreground);
   --primary: var(--grape);
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.95 0.025 290);
   --secondary-foreground: oklch(0.3 0.08 290);
   --muted: oklch(0.955 0.012 290);
   --muted-foreground: oklch(0.5 0.03 280);
-  --accent: oklch(0.94 0.04 250);
-  --accent-foreground: oklch(0.3 0.1 260);
-  --destructive: oklch(0.6 0.22 25);
-  --destructive-foreground: oklch(0.99 0 0);
   --border: oklch(0.91 0.018 290);
-  --input: oklch(0.91 0.018 290);
-  --ring: var(--grape);
 
   --t-int: var(--sky);
   --t-float: var(--teal);
   --t-str: var(--coral);
-  --t-bool: oklch(0.8 0.16 80);
+  --t-bool: oklch(0.72 0.16 75);
   --t-list: var(--grape);
   --t-none: oklch(0.6 0.02 280);
 
@@ -109,7 +96,6 @@
     radial-gradient(50% 50% at 90% 20%, oklch(0.88 0.1 185 / 0.5), transparent 70%),
     radial-gradient(50% 60% at 60% 100%, oklch(0.92 0.12 88 / 0.45), transparent 70%);
   --gradient-brand: linear-gradient(120deg, var(--grape), var(--sky) 55%, var(--teal));
-  --gradient-warm: linear-gradient(120deg, var(--coral), var(--sun));
   --shadow-soft: 0 10px 30px -12px oklch(0.4 0.15 290 / 0.25);
   --shadow-pop: 0 6px 0 0 oklch(0.42 0.2 293);
 }
@@ -118,19 +104,14 @@
   --background: oklch(0.17 0.03 285);
   --foreground: oklch(0.96 0.01 285);
   --card: oklch(0.22 0.035 285);
-  --card-foreground: var(--foreground);
-  --popover: oklch(0.22 0.035 285);
-  --popover-foreground: var(--foreground);
   --primary: oklch(0.68 0.2 293);
   --secondary: oklch(0.28 0.05 290);
   --secondary-foreground: oklch(0.92 0.04 290);
   --muted: oklch(0.25 0.03 285);
   --muted-foreground: oklch(0.72 0.03 285);
-  --accent: oklch(0.3 0.06 260);
-  --accent-foreground: oklch(0.92 0.04 250);
   --border: oklch(0.32 0.04 285);
-  --input: oklch(0.32 0.04 285);
   --code-bg: oklch(0.13 0.03 285);
+  --t-bool: oklch(0.8 0.15 80);
   --gradient-hero: radial-gradient(60% 60% at 15% 10%, oklch(0.45 0.2 293 / 0.45), transparent 70%),
     radial-gradient(50% 50% at 90% 20%, oklch(0.45 0.12 185 / 0.35), transparent 70%),
     radial-gradient(50% 60% at 60% 100%, oklch(0.5 0.12 60 / 0.25), transparent 70%);
@@ -138,49 +119,416 @@
   --shadow-pop: 0 6px 0 0 oklch(0.38 0.18 293);
 }
 
+/* ------------------------------------------------------------------ base */
+
 @layer base {
-  * { border-color: var(--color-border); }
-  html { scroll-behavior: smooth; }
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
 }
 
-@utility bg-hero { background-image: var(--gradient-hero); }
-@utility bg-brand { background-image: var(--gradient-brand); }
-@utility bg-warm { background-image: var(--gradient-warm); }
+/* ------------------------------------------------------------- utilities */
+
+@utility bg-hero {
+  background-image: var(--gradient-hero);
+}
+@utility bg-brand {
+  background-image: var(--gradient-brand);
+}
 @utility text-brand {
   background-image: var(--gradient-brand);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
-@utility shadow-soft { box-shadow: var(--shadow-soft); }
-@utility shadow-pop { box-shadow: var(--shadow-pop); }
+@utility shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
 
 @utility btn-primary {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  border-radius: 9999px; padding: 0.8rem 1.5rem; font-weight: 700;
-  background: var(--primary); color: var(--primary-foreground);
-  box-shadow: var(--shadow-pop); transition: transform .15s, box-shadow .15s;
-  &:hover { transform: translateY(-2px); }
-  &:active { transform: translateY(4px); box-shadow: 0 2px 0 0 oklch(0.42 0.2 293); }
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.8rem 1.5rem;
+  font-weight: 700;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-pop);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+  &:hover {
+    transform: translateY(-2px);
+  }
+  &:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 0 oklch(0.42 0.2 293);
+  }
 }
 @utility btn-ghost {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  border-radius: 9999px; padding: 0.8rem 1.5rem; font-weight: 700;
-  background: var(--card); color: var(--foreground);
-  border: 2px solid var(--border); transition: all .15s;
-  &:hover { border-color: var(--primary); color: var(--primary); }
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.8rem 1.5rem;
+  font-weight: 700;
+  background: var(--card);
+  color: var(--foreground);
+  border: 2px solid var(--border);
+  transition: all 0.15s;
+  &:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
 }
 
-@keyframes float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
-@keyframes pop-in { 0% { transform: scale(.6); opacity: 0 } 70% { transform: scale(1.08) } 100% { transform: scale(1); opacity: 1 } }
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 oklch(0.58 0.22 293 / .5) } 100% { box-shadow: 0 0 0 12px transparent } }
-@utility animate-float { animation: float 5s ease-in-out infinite; }
-@utility animate-pop { animation: pop-in .45s cubic-bezier(.2,.9,.3,1.3) both; }
-@utility animate-ring { animation: pulse-ring 1.4s ease-out infinite; }
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes pop-in {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 oklch(0.58 0.22 293 / 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+@utility animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+@utility animate-pop {
+  animation: pop-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+@utility animate-ring {
+  animation: pulse-ring 1.4s ease-out infinite;
+}
+
+/* -------------------------------------------------------- variable boxes */
+
+.var-box {
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.var-box[data-active] {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--glow) 28%, transparent),
+    0 8px 20px -8px var(--glow);
+}
+
+/* -------------------------------------------------- conditional flow tree
+   Looks (data-look): idle · true · false · lit (path Python took) · dim (skipped).
+   SVG drop-shadow filters give the glow; transitions animate between steps. */
+
+.flow {
+  --flow-idle: color-mix(in srgb, var(--muted-foreground) 55%, transparent);
+  --flow-true: var(--teal);
+  --flow-false: var(--coral);
+  --flow-lit: var(--primary);
+  --flow-keyword: var(--amber);
+}
+/* Scale the tree down to fit its column, but on phones keep text legible
+   and let the card scroll sideways instead. */
+@media (max-width: 640px) {
+  .flow-svg {
+    min-width: min(var(--flow-w), 600px);
+  }
+}
+.flow text {
+  dominant-baseline: central;
+  fill: var(--foreground);
+}
+.flow g,
+.flow rect,
+.flow path,
+.flow circle {
+  transition:
+    stroke 0.35s ease,
+    fill 0.35s ease,
+    opacity 0.35s ease,
+    filter 0.35s ease;
+}
+
+.flow .flow-code {
+  font: 600 14px var(--font-mono);
+}
+.flow .flow-keyword {
+  font: 700 13px var(--font-mono);
+  text-anchor: middle;
+  fill: var(--flow-keyword);
+}
+.flow .flow-caption {
+  font: 600 11px var(--font-sans);
+  fill: var(--muted-foreground);
+}
+.flow .flow-mark {
+  font: 700 14px var(--font-sans);
+  text-anchor: middle;
+}
+
+/* if / elif / else frames with a folder-style keyword tab */
+.flow-frame-box {
+  fill: color-mix(in srgb, var(--flow-keyword) 5%, var(--card));
+  stroke: color-mix(in srgb, var(--flow-keyword) 70%, transparent);
+  stroke-width: 2;
+}
+.flow-frame-tab {
+  fill: color-mix(in srgb, var(--flow-keyword) 18%, var(--card));
+  stroke: color-mix(in srgb, var(--flow-keyword) 70%, transparent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.flow-frame[data-look="true"] .flow-frame-box {
+  stroke: var(--flow-true);
+  fill: color-mix(in srgb, var(--flow-true) 6%, var(--card));
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--flow-true) 45%, transparent));
+}
+.flow-frame[data-look="lit"] .flow-frame-box {
+  stroke: var(--flow-lit);
+  fill: color-mix(in srgb, var(--flow-lit) 6%, var(--card));
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--flow-lit) 45%, transparent));
+}
+.flow-frame[data-look="false"] .flow-frame-box {
+  stroke: color-mix(in srgb, var(--flow-false) 60%, transparent);
+}
+.flow-frame[data-look="dim"] {
+  opacity: 0.4;
+}
+.flow-frame[data-look="dim"] .flow-frame-box {
+  stroke-dasharray: 6 6;
+}
+
+/* comparison boxes (Cond A / Cond B in the sketch) */
+.flow-condition-box {
+  fill: var(--card);
+  stroke: var(--sky);
+  stroke-width: 2;
+}
+.flow-condition[data-look="true"] .flow-condition-box {
+  stroke: var(--flow-true);
+  fill: color-mix(in srgb, var(--flow-true) 14%, var(--card));
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--flow-true) 70%, transparent));
+}
+.flow-condition[data-look="true"] .flow-mark {
+  fill: var(--flow-true);
+}
+.flow-condition[data-look="false"] .flow-condition-box {
+  stroke: var(--flow-false);
+  fill: color-mix(in srgb, var(--flow-false) 8%, var(--card));
+}
+.flow-condition[data-look="false"] .flow-mark {
+  fill: var(--flow-false);
+}
+.flow-condition[data-look="false"] .flow-code {
+  opacity: 0.7;
+}
+.flow-condition[data-look="dim"] {
+  opacity: 0.4;
+}
+.flow-condition[data-look="dim"] .flow-condition-box {
+  stroke-dasharray: 5 5;
+}
+
+/* and / or operator nodes */
+.flow-operator-box {
+  fill: var(--card);
+  stroke: var(--flow-keyword);
+  stroke-width: 2;
+}
+.flow-operator .flow-keyword {
+  fill: var(--grape);
+}
+.flow-operator[data-look="true"] .flow-operator-box {
+  stroke: var(--flow-true);
+  fill: color-mix(in srgb, var(--flow-true) 18%, var(--card));
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--flow-true) 70%, transparent));
+}
+.flow-operator[data-look="false"] .flow-operator-box {
+  stroke: var(--flow-false);
+  fill: color-mix(in srgb, var(--flow-false) 10%, var(--card));
+}
+.flow-operator[data-look="dim"] {
+  opacity: 0.4;
+}
+
+/* the decision point where True and False lines split */
+.flow-split-dot {
+  fill: var(--card);
+  stroke: var(--flow-idle);
+  stroke-width: 2;
+}
+.flow .flow-split-mark {
+  font: 700 12px var(--font-sans);
+  text-anchor: middle;
+  fill: var(--muted-foreground);
+}
+.flow-split[data-look="true"] .flow-split-dot {
+  fill: var(--flow-true);
+  stroke: var(--flow-true);
+  filter: drop-shadow(0 0 6px var(--flow-true));
+}
+.flow-split[data-look="false"] .flow-split-dot {
+  fill: var(--flow-false);
+  stroke: var(--flow-false);
+}
+.flow-split[data-look="true"] .flow-split-mark,
+.flow-split[data-look="false"] .flow-split-mark {
+  fill: white;
+}
+.flow-split[data-look="dim"] {
+  opacity: 0.4;
+}
+
+/* code blocks that run (or don't) */
+.flow-block-box {
+  fill: var(--card);
+  stroke: color-mix(in srgb, var(--grape) 35%, var(--border));
+  stroke-width: 2;
+}
+.flow-block[data-look="lit"] .flow-block-box {
+  stroke: var(--flow-lit);
+  fill: color-mix(in srgb, var(--flow-lit) 12%, var(--card));
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--flow-lit) 60%, transparent));
+}
+.flow-block[data-look="dim"] {
+  opacity: 0.35;
+}
+.flow-block[data-look="dim"] .flow-block-box {
+  stroke-dasharray: 6 6;
+}
+
+.flow-merge {
+  fill: var(--flow-idle);
+}
+.flow-merge[data-look="lit"] {
+  fill: var(--flow-lit);
+  filter: drop-shadow(0 0 6px var(--flow-lit));
+}
+
+/* connectors */
+.flow-edge-line {
+  fill: none;
+  stroke: var(--flow-idle);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.flow-edge[data-look="true"] .flow-edge-line {
+  stroke: var(--flow-true);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 5px var(--flow-true));
+}
+.flow-edge[data-look="false"] .flow-edge-line {
+  stroke: color-mix(in srgb, var(--flow-false) 70%, transparent);
+}
+.flow-edge[data-look="lit"] .flow-edge-line {
+  stroke: var(--flow-lit);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 6px var(--flow-lit));
+}
+.flow-edge[data-look="dim"] .flow-edge-line {
+  stroke-dasharray: 5 7;
+  opacity: 0.35;
+}
+.flow-edge-spark {
+  fill: none;
+  stroke: white;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 0.1 34;
+  opacity: 0.9;
+  animation: flow-spark 1.1s linear infinite;
+}
+@keyframes flow-spark {
+  to {
+    stroke-dashoffset: -34.1;
+  }
+}
+
+/* True / False pills sitting on their lines */
+.flow-label rect {
+  stroke-width: 1.5;
+}
+.flow-label text {
+  font: 700 11px var(--font-sans);
+  text-anchor: middle;
+}
+.flow-label[data-tone="true"] rect {
+  fill: color-mix(in srgb, var(--flow-true) 16%, var(--card));
+  stroke: var(--flow-true);
+}
+.flow-label[data-tone="true"] text {
+  fill: color-mix(in srgb, var(--flow-true) 75%, var(--foreground));
+}
+.flow-label[data-tone="false"] rect {
+  fill: color-mix(in srgb, var(--flow-false) 14%, var(--card));
+  stroke: var(--flow-false);
+}
+.flow-label[data-tone="false"] text {
+  fill: color-mix(in srgb, var(--flow-false) 80%, var(--foreground));
+}
+.flow-label[data-look="lit"] rect {
+  filter: drop-shadow(0 0 5px var(--flow-lit));
+}
+.flow-label[data-look="dim"] {
+  opacity: 0.4;
+}
+
+/* the step that is happening right now breathes gently */
+.flow [data-current] {
+  animation: flow-breathe 1.6s ease-in-out infinite;
+}
+@keyframes flow-breathe {
+  50% {
+    opacity: 0.78;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-edge-spark,
+  .flow [data-current],
+  .animate-float,
+  .animate-ring {
+    animation: none;
+  }
+  .animate-pop {
+    animation-duration: 0.01s;
+  }
+}
