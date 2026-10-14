@@ -16,6 +16,7 @@ describe("routing", () => {
     ["/reference", "/reference/"],
     ["/reference/python.builtins.print", "/reference/$entryId"],
     ["/reference/python.types.str.upper", "/reference/$entryId"],
+    ["/dev/visualizations", "/dev/visualizations"],
   ])("%s renders a real page", (path, routeId) => {
     expect(leafRoute(path)).toBe(routeId);
   });

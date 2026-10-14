@@ -16,10 +16,16 @@ import { Route as CoursesIndexRouteImport } from './routes/courses.index'
 import { Route as ReferenceEntryIdRouteImport } from './routes/reference.$entryId'
 import { Route as CoursesCourseIdIndexRouteImport } from './routes/courses.$courseId.index'
 import { Route as CoursesCourseIdLessonIdRouteImport } from './routes/courses.$courseId.$lessonId'
+import { Route as DevVisualizationsRouteImport } from './routes/dev.visualizations'
 
 const PlaygroundRoute = PlaygroundRouteImport.update({
   id: '/playground',
   path: '/playground',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevVisualizationsRoute = DevVisualizationsRouteImport.update({
+  id: '/dev/visualizations',
+  path: '/dev/visualizations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -56,6 +62,7 @@ const CoursesCourseIdLessonIdRoute = CoursesCourseIdLessonIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/playground': typeof PlaygroundRoute
+  '/dev/visualizations': typeof DevVisualizationsRoute
   '/courses/': typeof CoursesIndexRoute
   '/reference/': typeof ReferenceIndexRoute
   '/reference/$entryId': typeof ReferenceEntryIdRoute
@@ -65,6 +72,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/playground': typeof PlaygroundRoute
+  '/dev/visualizations': typeof DevVisualizationsRoute
   '/courses': typeof CoursesIndexRoute
   '/reference': typeof ReferenceIndexRoute
   '/reference/$entryId': typeof ReferenceEntryIdRoute
@@ -75,6 +83,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/playground': typeof PlaygroundRoute
+  '/dev/visualizations': typeof DevVisualizationsRoute
   '/courses/': typeof CoursesIndexRoute
   '/reference/': typeof ReferenceIndexRoute
   '/reference/$entryId': typeof ReferenceEntryIdRoute
@@ -86,6 +95,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/playground'
+    | '/dev/visualizations'
     | '/courses/'
     | '/reference/'
     | '/reference/$entryId'
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/playground'
+    | '/dev/visualizations'
     | '/courses'
     | '/reference'
     | '/reference/$entryId'
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/playground'
+    | '/dev/visualizations'
     | '/courses/'
     | '/reference/'
     | '/reference/$entryId'
@@ -114,6 +126,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PlaygroundRoute: typeof PlaygroundRoute
+  DevVisualizationsRoute: typeof DevVisualizationsRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
   ReferenceIndexRoute: typeof ReferenceIndexRoute
   ReferenceEntryIdRoute: typeof ReferenceEntryIdRoute
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/playground'
       fullPath: '/playground'
       preLoaderRoute: typeof PlaygroundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/visualizations': {
+      id: '/dev/visualizations'
+      path: '/dev/visualizations'
+      fullPath: '/dev/visualizations'
+      preLoaderRoute: typeof DevVisualizationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -178,6 +198,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PlaygroundRoute: PlaygroundRoute,
+  DevVisualizationsRoute: DevVisualizationsRoute,
   CoursesIndexRoute: CoursesIndexRoute,
   ReferenceIndexRoute: ReferenceIndexRoute,
   ReferenceEntryIdRoute: ReferenceEntryIdRoute,
