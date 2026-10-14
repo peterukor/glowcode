@@ -9,6 +9,7 @@
  * - debug questions: the program fails with exactly the error shown in `errorOutput`
  * - predict questions: the answer matches the first line the program prints
  * - practice solutions: they run without errors
+ * - reference entries: example output, and each mistake's error (last line) or output
  *
  * Usage: bun run check:python   (needs python3 on the PATH)
  */
@@ -19,6 +20,7 @@ import { join } from "node:path";
 import { courses } from "@/courses/registry";
 import type { Block } from "@/courses/types";
 import { examples } from "@/data/examples";
+import { allReferences } from "@/references/registry";
 import type { PyValue, Variables } from "@/types/python";
 import type { Walkthrough } from "@/types/trace";
 
@@ -36,10 +38,30 @@ with open("__vars.json", "w") as _f:
     _j.dump({k: v for k, v in globals().items() if not k.startswith("_") and isinstance(v, _simple)}, _f)
 `;
 
-function run(code: string, dumpVars = false): Run {
+// For programs that call input(): feeds the typed lines and echoes them, so the output looks
+// like a terminal session ("Enter your name: Ada").
+const ECHO_RUNNER = `
+import builtins
+_real_input = builtins.input
+def _echo_input(prompt=""):
+    value = _real_input(prompt)
+    print(value)
+    return value
+builtins.input = _echo_input
+with open("main.py") as _f:
+    exec(compile(_f.read(), "main.py", "exec"), {"__name__": "__main__"})
+`;
+
+function run(code: string, dumpVars = false, input?: string[]): Run {
   writeFileSync(join(dir, "main.py"), dumpVars ? code + "\n" + DUMP : code);
+  writeFileSync(join(dir, "__run.py"), ECHO_RUNNER);
   rmSync(join(dir, "__vars.json"), { force: true });
-  const r = spawnSync("python3", ["-I", "main.py"], { cwd: dir, encoding: "utf8" });
+  const r = spawnSync("python3", ["-I", input ? "__run.py" : "main.py"], {
+    cwd: dir,
+    encoding: "utf8",
+    input: input ? input.join("\n") + "\n" : "",
+    timeout: 10_000,
+  });
   if (r.error) throw new Error(`Couldn't run python3: ${r.error.message}`);
   let vars: Record<string, unknown> = {};
   try {
@@ -122,6 +144,30 @@ for (const course of courses) {
   }
 }
 for (const example of examples) checkWalkthrough(example, "playground");
+
+const lastLine = (text: string) => text.split("\n").at(-1) ?? "";
+for (const entry of allReferences) {
+  const where = `reference ${entry.id}`;
+  for (const x of entry.examples ?? []) {
+    checked++;
+    const r = run(x.code, false, x.input);
+    if (!r.ok) problems.push(`${where}: example fails in Python:\n${r.stderr}`);
+    else if (x.output && show(r.stdout) !== show(x.output)) problems.push(`${where}: example prints ${show(r.stdout)}, but the manual shows ${show(x.output)}`);
+    if (x.walkthrough) checkWalkthrough(x.walkthrough, where);
+  }
+  for (const m of entry.mistakes ?? []) {
+    if (!m.code || m.neverEnds) continue;
+    checked++;
+    const r = run(m.code, false, m.input);
+    if (m.error) {
+      if (r.ok) problems.push(`${where}: mistake "${m.title}" should fail with ${m.error}, but it runs`);
+      else if (lastLine(r.stderr) !== m.error) problems.push(`${where}: mistake "${m.title}" shows\n  ${m.error}\nPython prints\n  ${lastLine(r.stderr)}`);
+    } else if (m.output) {
+      if (!r.ok) problems.push(`${where}: mistake "${m.title}" fails in Python:\n${r.stderr}`);
+      else if (show(r.stdout) !== show(m.output)) problems.push(`${where}: mistake "${m.title}" prints ${show(r.stdout)}, but the manual shows ${show(m.output)}`);
+    }
+  }
+}
 
 rmSync(dir, { recursive: true, force: true });
 if (problems.length) {
