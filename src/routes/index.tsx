@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Glowcode · Watch your Python come alive" },
-      { name: "description", content: "A playful, visual way to learn Python. Write real code and see variables, loops and functions animate." },
+      { name: "description", content: "A playful, visual way to learn Python. Step through real code and watch variables, loops and functions change." },
     ],
   }),
   component: Index,
@@ -135,7 +135,7 @@ function Index() {
             <h1 className="mt-6 text-5xl font-extrabold leading-[1.02] md:text-7xl">
               Don't just write code. <span className="text-brand">Watch it come alive.</span>
             </h1>
-            <p className="mt-6 max-w-lg text-lg text-muted-foreground">Write real Python and see every variable, loop and decision animate in front of you — step by step.</p>
+            <p className="mt-6 max-w-lg text-lg text-muted-foreground">Step through real Python programs and watch every variable, loop and decision change in front of you, one step at a time.</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/courses" className="btn-primary"><Play className="h-4 w-4" /> Start learning</Link>
               <Link to="/playground" className="btn-ghost"><BookOpen className="h-4 w-4" /> Try the playground</Link>
@@ -158,8 +158,8 @@ function Index() {
         <h2 className="text-center text-4xl font-extrabold md:text-5xl">Three steps. Zero mystery.</h2>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {[
-            { n: "1", t: "Write", d: "Type real Python in a friendly editor.", c: "bg-grape" },
-            { n: "2", t: "Run", d: "Play, pause, or step through line by line.", c: "bg-sky" },
+            { n: "1", t: "Read", d: "Start from a short, real Python program.", c: "bg-grape" },
+            { n: "2", t: "Step", d: "Play, pause, or step through it line by line.", c: "bg-sky" },
             { n: "3", t: "Understand", d: "See exactly what changed and why.", c: "bg-teal" },
           ].map((x) => (
             <div key={x.n} className="rounded-3xl border-2 bg-card p-8 shadow-soft transition-transform hover:-translate-y-1">
