@@ -20,6 +20,14 @@ src/courses/<course-id>/
 2. Import it in the chapter's `chapter.ts` and add it to `lessons`. Array order is display order.
 3. For a new chapter, create `chapter.ts` and add the chapter to the course's `chapters`.
 
+A chapter can be in the course outline before it has lessons. Give it `status: "planned"` and
+`lessons: []`: the contents list shows it greyed out with a "Planned" tag and no link. Use
+`"in-progress"` while some lessons are open and more are coming, and `"complete"` (the default)
+when it's done. The validator rejects a planned chapter with lessons and any other chapter
+without them, so never add a placeholder lesson to make a chapter appear. Python Fundamentals
+keeps its planned chapters in `chapters/planned.ts`; see
+[`COURSE_OUTLINE.md`](./COURSE_OUTLINE.md) for the outline and how to start the next chapter.
+
 Courses are independent. A lesson can be added to any course, in any order, without touching
 other courses. Nothing enforces prerequisites between them.
 
@@ -41,6 +49,13 @@ Rename the title freely; keep the id.
 Prefix activity ids with what they are (`predict-`, `debug-`, `reflect-`, `practice-`). Prefix
 walkthrough ids with the language (`py-`, `java-`).
 
+**Moving content between lessons.** Keep the ids when you move an activity or walkthrough to
+another lesson (Phase 6 moved `predict-socks`, `debug-capital-print` and others out of
+`what-is-programming`). Progress saves completed lessons by lesson id and the last activity as
+a `{ lessonId, activityId }` pair. If that activity has left the lesson, "Continue" simply
+opens the lesson at the top (`resumeTarget` checks with `resumableIdsIn`), so no migration is
+needed. Never reuse an old id for different content.
+
 ## 3. Defining sections
 
 A lesson is a list of sections, and each section is a titled list of blocks:
@@ -52,6 +67,13 @@ A lesson is a list of sections, and each section is a titled list of blocks:
 Sections follow the teaching journey (problem, concept, example, execution, practice,
 debugging) but don't need to match it one to one. Most lessons have four to eight. The first is
 usually the problem, with the id `why`.
+
+The last section is the recap: id `key-ideas`, title "Key ideas", and a single `list` block of
+three to six short items. Nothing else goes in it.
+
+```ts
+{ id: "key-ideas", title: "Key ideas", blocks: [{ type: "list", items: ["…", "…", "…"] }] }
+```
 
 ## 4. Paragraphs and lists
 
@@ -99,6 +121,12 @@ print(age + 1)`,
 Code is read-only: there is no editor and nothing runs. `output` must be exactly what the code
 prints when run. Never put a function's return value in `output` (see the guidelines on output
 versus return values).
+
+Leave `output` out when the block's walkthrough asks for a prediction (a step with a
+`checkpoint`): otherwise the answer is printed above the question. The walkthrough shows the
+output at the right step, and `check:python` still checks every step against Python. Leave it
+out too when the student is meant to work the output out, as in an "explain this program"
+reflection; say so in the caption.
 
 ## 6. Associating a walkthrough
 
@@ -340,6 +368,17 @@ inside functions), final output or variables, a debug
 question's `errorOutput`, or a predict question's answer doesn't match what Python actually
 does. Neither check can tell whether your explanations are right; that part is your job.
 
+## Activity formats that don't exist yet
+
+Use an existing block and note the improvement rather than building a new activity type inside a
+content phase:
+
+- **Put these lines in order.** List the shuffled lines with a letter each (A, B, C…) in a
+  `list` block, then ask a `predict` question whose choices are orders ("C, B, D, A"),
+  each wrong order with feedback. A drag-to-reorder block is a candidate for roadmap phase 7.
+- **What runs next?** A `predict` question with the code and "Python has just finished line 2"
+  in the prompt works well; inside a walkthrough, a checkpoint does the same job.
+
 ## A complete example
 
 A short, realistic lesson using most block types. It would live at
@@ -475,6 +514,19 @@ messages.*
 2. The real error message, and how to read it (last line first, then the line number).
 3. Two or three debug questions, each with a different realistic bug and `errorOutput`.
 4. A `reflect` prompt asking the student to explain a bug in their own words.
+
+### Chapter review lesson
+
+Checks the chapter by asking students to use it on programs they haven't seen. *Example:
+Chapter Review & Practice (`chapter-1-review`).*
+
+1. One short paragraph on how to approach it (trace, don't guess). No new teaching.
+2. Predict questions that combine ideas from different lessons, including at least one with a
+   twist (code that prints code, two lines that print the same thing for different reasons).
+3. An "explain this program" `reflect` prompt with the code shown above it and no output.
+4. A debug question for each kind of error the chapter covered, with real `errorOutput`.
+5. Practice tasks that combine the chapter's skills. No walkthrough: the review applies what
+   the walkthroughs taught.
 
 ### Problem-solving lesson
 

@@ -1,6 +1,6 @@
 # Glowcode Product Roadmap & Decision Log
 
-Status: living planning document. Last reviewed: 2026-10-13.
+Status: living planning document. Last reviewed: 2026-10-14.
 Purpose: source of truth for development prompts, scope decisions and future reviews. Update this document when the product decisions change; never silently reinterpret a previous decision.
 
 ## Product vision
@@ -56,3 +56,6 @@ Before writing a Claude implementation prompt or reviewing a phase:
 - 2026-10-13: Entire diagram remains visible; active operations and paths glow by execution event. Function diagrams show input, function and printed/returned/mutated effects.
 - 2026-10-13: Teach through inline interactions and curated prediction checkpoints, without turning every line into a quiz.
 - 2026-10-13: Confirm editable IDE is a **future feature**, not canceled. Maintain compatibility and extension points; implementation requires its own approved phase.
+- 2026-10-14 (Phase 6, from the approved Phase 6 brief): Python Fundamentals outline is ten chapters: Getting Started with Programming; Variables, Values & Data Types; Operators & Expressions; Making Decisions with Conditionals; Repetition with Loops; Strings; Lists & Collections; Functions; Errors & Debugging; Putting It Together. Only Chapter 1 is written; Chapters 3–10 are shown as **planned** (no placeholder lessons) and Chapter 2 keeps its one existing lesson. No chapter locking. Details and status in COURSE_OUTLINE.md. Later changes to this order are proposed and logged here first.
+- 2026-10-14 (Phase 6): Lessons end with a short "Key ideas" list (the Phase 6 brief asks for a concise recap). This replaces the earlier "no recap" guideline; TEACHING_GUIDELINES.md section 13 is updated.
+- 2026-10-14 (Phase 6): "Arrange in order" activities use multiple-choice orders for now. A drag-to-reorder activity is a candidate for phase 7, not built yet.

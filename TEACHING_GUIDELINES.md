@@ -189,7 +189,11 @@ and it shouldn't repeat a question the lesson asks elsewhere.
 
 - Explain each idea **once**, well. Later, refer back to it in a phrase ("remember: right side
   first") instead of explaining it again.
-- Don't recap the lesson at the end. The objectives at the top already say what it covers.
+- End with a **Key ideas** list and nothing else as a recap: three to six short items, each a
+  fact the student should keep, in a final section with the id `key-ideas`. Don't add a closing
+  paragraph or explain anything again there. (Changed in Phase 6, 2026-10-14: earlier lessons
+  had no recap at all. A short list helps beginners check what they took away without
+  repeating the lesson.)
 - Each activity should test something different. Two questions about the same line are one
   question too many.
 - A lesson doesn't need every kind of block. Use what helps this idea.
@@ -220,7 +224,9 @@ and check:
 - [ ] Walkthrough steps were checked line by line.
 - [ ] Callouts are few, and each says something the text doesn't.
 - [ ] Nothing is technically false, even where it's simplified.
-- [ ] Nothing is explained twice, and there's no closing summary.
+- [ ] Nothing is explained twice; the only recap is the short Key ideas list.
+- [ ] No answer is visible before the student has tried: a code block above a walkthrough that
+      asks for a prediction doesn't show the program's output.
 - [ ] It reads well aloud.
 
 ## Teaching deeply without writing long

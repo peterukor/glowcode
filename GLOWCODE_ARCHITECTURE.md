@@ -75,14 +75,17 @@ src/
 ## Content registry and validation
 
 `courses/registry.ts` lists every course. `courses/queries.ts` answers questions about content
-(`publishedLessons`, `findPublishedLesson`, `lessonNeighbors`, `visibleChapters`,
-`walkthroughsIn`, `activitiesIn`) and checks it:
+(`publishedLessons`, `findPublishedLesson`, `lessonNeighbors`, `lessonPosition`,
+`visibleChapters`, `chapterCounts`, `walkthroughsIn`, `activitiesIn`, `resumableIdsIn`) and
+checks it. A chapter can be `planned` (in the outline, no lessons yet): it's listed in the
+contents without a link and counted as upcoming on the course card.
 
 `validateCourses()` reports duplicate ids (courses, chapters, lessons, sections, activities,
 walkthroughs), non-URL-safe ids, unknown reference ids (in `references` or inline text),
 answers that aren't among a question's choices, duplicate choice ids, highlighted lines
 outside the snippet, walkthrough code that differs from the code
-shown, and walkthrough steps pointing at lines that don't exist. The test suite fails on any
+shown, walkthrough steps pointing at lines that don't exist, planned chapters that have
+lessons, and other chapters that have none. The test suite fails on any
 problem, so broken content never ships.
 
 ## Routing
