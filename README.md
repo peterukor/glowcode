@@ -38,9 +38,9 @@ unknown paths so deep links like `/courses/python-fundamentals/why-variables-exi
 src/
   courses/        course content (TypeScript) + registry + validation
   progress/       student progress: pure logic, versioned storage, React hooks
-  references/     reference / glossary entries and the inline term tooltip
-  routes/         pages: /, /courses, /courses/:course, /courses/:course/:lesson, /playground
-  components/     course/ (cards, sidebar), lesson/ (layout, blocks, Ask Glow),
+  references/     the reference manual: entries, search, safe code links, inline explanations
+  routes/         pages: /, /courses, /courses/:course, /courses/:course/:lesson, /reference, /reference/:entry, /playground
+  components/     course/ (cards, sidebar), lesson/ (layout, blocks, Ask Glow), reference/ (manual pages),
                   walkthrough/ (the step-by-step player shared with the playground), shared UI
   visualizations/ variable boxes, conditional flow tree, loops, lists, functions
   types/          Python values, walkthrough and trace-step contracts

@@ -240,14 +240,61 @@ code, so never write a prompt that implies it will. The sample solution sits beh
 
 ## 9. Linking to reference entries
 
-Reference entries live in `src/references/registry.ts`, with ids like
-`concept.variable`, `python.builtins.print` and `python.types.str`.
+The manual's entries live in `src/references/entries/` (`concepts.ts`, `python.ts`), with ids
+like `concept.variable`, `python.builtins.print`, `python.types.str` and
+`python.types.str.upper`.
 
-- Link inline, the first time a term appears: `[string](ref:python.types.str)`.
+- Link inline, the first time a term appears: `[string](ref:python.types.str)`. Students can
+  hover, focus or tap it for a one-line explanation and open the full page with "See more".
 - List the entries worth looking up in the lesson's `references` array. They appear under
   "Look it up" at the end of the lesson.
-- If an entry doesn't exist yet, add one to the registry (id, title, category, a one or two
-  sentence summary). The full manual pages arrive later and reuse the same ids.
+- Code examples link recognised built-ins, keywords and methods automatically, but only when
+  the snippet makes the meaning certain. You don't mark anything up in code.
+- `bun run test` fails if a lesson links to an id that doesn't exist.
+
+### Adding a reference entry
+
+Add an object to the right file. No page, route or menu changes are needed: the navigation,
+search and page are built from the data.
+
+```ts
+{
+  id: "python.types.str.lower",          // methods live under their type
+  scope: "python",
+  category: "method",
+  parent: "python.types.str",
+  title: "str.lower()",
+  summary: "Gives back a copy of the string in lowercase. The original doesn't change.",
+  aliases: ["lower", "lower()"],
+  keywords: ["lowercase", "small letters", "string lowercase"],   // what students might type
+  explanation: ["`lower()` is a [method](ref:concept.method) of strings…"],
+  syntax: "text.lower()",
+  accepts: "Nothing goes inside the parentheses.",
+  returns: "A new string in lowercase.",   // callables must state all three
+  prints: "Nothing.",
+  changes: "Nothing. The original string stays as it was.",
+  examples: [{ code: `word = "CAT"\nprint(word.lower())`, output: ["cat"] }],
+  mistakes: [{ title: "Expecting the string to change", explanation: "…", code: `…`, output: ["…"] }],
+  related: ["python.types.str", "python.types.str.upper", "concept.mutability"],
+}
+```
+
+- Only `id`, `scope`, `category`, `title`, `summary` and `explanation` are required. A concept
+  has no parameters; leave out what doesn't apply.
+- The summary is one or two plain sentences with no links: it appears in popups and search
+  results.
+- Every function and method must say what it **returns**, **prints** and **changes**, even when
+  the answer is "Nothing." That's how the manual keeps the three apart.
+- `aliases` and `keywords` feed search. Add the words a beginner would type, including words
+  from error messages ("not defined").
+- Choose `related` entries by hand: the ones that help understand this one.
+- Examples are checked against real Python by `bun run check:python`. For `input()`, give
+  `input: ["Ada"]` and include the typed text in `output` as it appears on screen. A mistake
+  states its `error` (the last line Python prints) or `output`; mark an infinite loop with
+  `neverEnds: true`.
+- To show a call diagram, add `call` to an example (the same `CallEvent` walkthroughs use). To
+  embed a walkthrough, pass an existing curated one (`walkthrough: getExample("len")`) whose
+  code is exactly the example's code. Don't write a walkthrough just for the manual.
 
 ## 10. Publishing or drafting a lesson
 
