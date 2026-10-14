@@ -72,6 +72,8 @@ export type CallEvent = {
   name: string;
   /** For methods, the object it's called on, e.g. `items` in `items.append("apple")`. */
   receiver?: string;
+  /** The value the receiver refers to, shown with it: `'["pen"]'`. */
+  receiverValue?: string;
   /** Argument values, as Python would write them: ['"cat"']. */
   args: string[];
   phase: "call" | "run" | "result" | "assign";

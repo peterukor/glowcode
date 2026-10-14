@@ -1,92 +1,89 @@
 /**
- * Minimal reference (manual / glossary) entries, so lessons can link to stable IDs today.
- * The full manual (syntax, arguments, examples, common mistakes, pages) arrives in Phase 3
- * and extends `ReferenceEntry`; lesson content won't need to change.
+ * The reference registry: every manual entry, looked up by stable id.
  *
- * ID convention: <language|concept>.<category>.<name>, e.g.
+ * ID convention: <scope>.<group>.<name>, e.g.
  *   concept.variable  ·  python.builtins.print  ·  python.types.str.upper
  * Methods live under their type (python.types.list.append), matching the manual's tree.
+ *
+ * Plain data and pure functions only (no React), so lessons, the manual pages and a
+ * future code editor can all use it.
  */
+import { conceptEntries } from "./entries/concepts";
+import { pythonEntries } from "./entries/python";
+import type { ReferenceCategory, ReferenceEntry, ReferenceScope } from "./types";
 
-export type ReferenceCategory = "concept" | "keyword" | "data-type" | "operator" | "built-in" | "method" | "error";
+export type { ReferenceCategory, ReferenceEntry, ReferenceScope } from "./types";
 
-export type ReferenceEntry = {
-  id: string;
-  title: string;
-  category: ReferenceCategory;
-  /** One or two plain-English sentences, shown on hover / focus / tap. */
-  summary: string;
-};
+/** Reference ids are plain strings; `validateReferences()` and the content tests catch unknown ones. */
+export type ReferenceId = string;
 
-const entries = [
-  {
-    id: "concept.program",
-    title: "Program",
-    category: "concept",
-    summary: "A list of instructions, written in a programming language, that a computer carries out in order.",
-  },
-  {
-    id: "concept.programming-language",
-    title: "Programming language",
-    category: "concept",
-    summary: "A precise written language for instructions that both people and computers can read. Python and Java are programming languages.",
-  },
-  {
-    id: "concept.interpreter",
-    title: "Interpreter",
-    category: "concept",
-    summary: "The program that reads your Python code and carries it out, one instruction at a time, from the top.",
-  },
-  {
-    id: "concept.variable",
-    title: "Variable",
-    category: "concept",
-    summary: "A name that refers to a value, so a program can remember the value and use it later.",
-  },
-  {
-    id: "python.builtins.print",
-    title: "print()",
-    category: "built-in",
-    summary: "Shows values as text in the console. It displays information; it doesn't give a value back to your program (it returns None).",
-  },
-  {
-    id: "python.operators.assignment",
-    title: "= (assignment)",
-    category: "operator",
-    summary: "Works out the value on the right, then makes the name on the left refer to it. It is not the math 'equals'.",
-  },
-  {
-    id: "python.operators.addition",
-    title: "+ (addition)",
-    category: "operator",
-    summary: "Adds two numbers. With two strings it joins them instead: \"Hi, \" + \"Sam\" gives \"Hi, Sam\".",
-  },
-  {
-    id: "python.types.int",
-    title: "int",
-    category: "data-type",
-    summary: "Whole numbers like 13, 0 or -5. Short for integer.",
-  },
-  {
-    id: "python.types.str",
-    title: "str",
-    category: "data-type",
-    summary: "Text, written inside quotes like \"Ada\". Short for string: a string of characters.",
-  },
-  {
-    id: "python.errors.NameError",
-    title: "NameError",
-    category: "error",
-    summary: "Python stopped because the code used a name it doesn't know. Usually a typo, a capital letter, or a variable used before it was created.",
-  },
-] as const satisfies readonly ReferenceEntry[];
-
-export type ReferenceId = (typeof entries)[number]["id"];
-
+const entries: readonly ReferenceEntry[] = [...conceptEntries, ...pythonEntries];
 const byId = new Map<string, ReferenceEntry>(entries.map((e) => [e.id, e]));
+
+export const allReferences: readonly ReferenceEntry[] = entries;
 
 export function getReference(id: string): ReferenceEntry | undefined {
   return byId.get(id);
 }
 
-export const allReferences: readonly ReferenceEntry[] = entries;
+/** Where an entry's full page lives. */
+export const referencePath = (id: string) => `/reference/${encodeURIComponent(id)}`;
+
+/** The methods that belong to a type, in authored order. */
+export function methodsOf(typeId: string): ReferenceEntry[] {
+  return entries.filter((e) => e.parent === typeId);
+}
+
+// ----------------------------------------------------------------- navigation tree
+
+export const SCOPE_TITLES: Record<ReferenceScope, string> = {
+  concept: "Programming Concepts",
+  python: "Python",
+  java: "Java",
+};
+
+export const CATEGORY_TITLES: Record<ReferenceCategory, string> = {
+  concept: "Concepts",
+  "data-type": "Data Types",
+  "built-in": "Built-in Functions",
+  method: "Methods",
+  keyword: "Control Flow",
+  operator: "Operators",
+  error: "Errors",
+};
+
+/** Order of groups inside a language. Methods aren't a group: they sit under their type. */
+const CATEGORY_ORDER: ReferenceCategory[] = ["concept", "data-type", "built-in", "keyword", "operator", "error"];
+const SCOPE_ORDER: ReferenceScope[] = ["concept", "python", "java"];
+
+export type ReferenceTreeItem = { entry: ReferenceEntry; children: ReferenceEntry[] };
+export type ReferenceTreeGroup = { category: ReferenceCategory; title: string; items: ReferenceTreeItem[] };
+export type ReferenceTreeSection = { scope: ReferenceScope; title: string; groups: ReferenceTreeGroup[] };
+
+/**
+ * The manual's navigation, derived from the entries: scope → category → entries, with
+ * methods nested under their type. Adding an entry never means editing a menu.
+ */
+export function referenceTree(list: readonly ReferenceEntry[] = entries): ReferenceTreeSection[] {
+  return SCOPE_ORDER.flatMap((scope) => {
+    const inScope = list.filter((e) => e.scope === scope);
+    const groups = CATEGORY_ORDER.flatMap((category) => {
+      const items = inScope
+        .filter((e) => e.category === category && !e.parent)
+        .map((entry) => ({ entry, children: inScope.filter((c) => c.parent === entry.id) }));
+      return items.length ? [{ category, title: scope === "concept" ? SCOPE_TITLES.concept : CATEGORY_TITLES[category], items }] : [];
+    });
+    return groups.length ? [{ scope, title: SCOPE_TITLES[scope], groups }] : [];
+  });
+}
+
+/** Short label for navigation: methods show as `upper()` under their type. */
+export const navTitle = (entry: ReferenceEntry) => (entry.parent ? entry.title.slice(entry.title.indexOf(".") + 1) : entry.title);
+
+/** "Python › Data Types › str" for an entry's breadcrumb. */
+export function breadcrumb(entry: ReferenceEntry): string[] {
+  const parent = entry.parent ? getReference(entry.parent) : undefined;
+  const top = SCOPE_TITLES[entry.scope];
+  const group = CATEGORY_TITLES[(parent ?? entry).category];
+  return entry.scope === "concept" ? [top] : parent ? [top, group, parent.title] : [top, group];
+}

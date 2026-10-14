@@ -20,10 +20,18 @@ export function FunctionView({ call }: { call: CallEvent }) {
   return (
     <div className="fn flex flex-col items-center gap-1.5" role="group" aria-label={`Function call: ${label}`}>
       <div className="fn-node" data-on={at === 0 || undefined}>
-        <p className="fn-caption">{call.receiver ? "Object and argument" : call.args.length === 1 ? "Input" : "Inputs"}</p>
+        <p className="fn-caption">{inputCaption(call)}</p>
         <p className="flex flex-wrap justify-center gap-2 font-mono font-bold">
-          {call.receiver && <span>{call.receiver}</span>}
-          {call.args.length ? call.args.map((a, i) => <span key={i}>{a}</span>) : <span className="text-muted-foreground">nothing</span>}
+          {call.receiver && (
+            <span>
+              {call.receiver}
+              {call.receiverValue && <span className="font-normal text-muted-foreground"> = {call.receiverValue}</span>}
+            </span>
+          )}
+          {call.args.map((a, i) => (
+            <span key={i}>{a}</span>
+          ))}
+          {!call.receiver && !call.args.length && <span className="text-muted-foreground">nothing</span>}
         </p>
       </div>
 
@@ -65,6 +73,11 @@ export function FunctionView({ call }: { call: CallEvent }) {
       <p className="sr-only">{describe(call, label, done)}</p>
     </div>
   );
+}
+
+function inputCaption(call: CallEvent) {
+  if (call.receiver) return call.args.length ? "Called on, with" : "Called on";
+  return call.args.length === 1 ? "Input" : "Inputs";
 }
 
 function Arrow({ on }: { on: boolean }) {
