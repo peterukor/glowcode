@@ -120,6 +120,9 @@
   --foreground: oklch(0.96 0.01 285);
   --card: oklch(0.22 0.035 285);
   --primary: oklch(0.68 0.2 293);
+  /* The dark theme's primary is light enough to read as text on the dark page, which is too
+     light behind white button text (3.1:1). Buttons use a deeper grape to reach WCAG AA. */
+  --primary-button: oklch(0.55 0.2 293);
   --secondary: oklch(0.28 0.05 290);
   --secondary-foreground: oklch(0.92 0.04 290);
   --muted: oklch(0.25 0.03 285);
@@ -192,7 +195,7 @@
   border-radius: 9999px;
   padding: 0.8rem 1.5rem;
   font-weight: 700;
-  background: var(--primary);
+  background: var(--primary-button, var(--primary));
   color: var(--primary-foreground);
   box-shadow: var(--shadow-pop);
   transition:

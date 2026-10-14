@@ -50,7 +50,7 @@ export function CourseSidebar({
           if (isPlanned(chapter)) {
             // Part of the outline, nothing to open yet: no lessons, no fake links.
             return (
-              <li key={chapter.id} className="planned-chapter flex items-center gap-2 rounded-xl px-2 py-2 text-muted-foreground/75" title={chapter.description}>
+              <li key={chapter.id} className="planned-chapter flex items-center gap-2 rounded-xl px-2 py-2 text-muted-foreground" title={chapter.description}>
                 <span className="font-mono text-xs font-bold">{number}</span>
                 <span className="flex-1 text-sm font-semibold">{chapter.title}</span>
                 <span className="rounded-full border border-dashed border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">Planned</span>
@@ -112,7 +112,7 @@ export function CourseSidebar({
                     );
                   })}
                   {chapter.status === "in-progress" && (
-                    <li className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground/75">
+                    <li className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground">
                       <span className="h-4 w-4 shrink-0 rounded-full border-2 border-dashed border-border" aria-hidden />
                       More lessons in this chapter are on the way
                     </li>

@@ -64,7 +64,7 @@ export function CodeExample({ block, onActivity }: { block: CodeBlock; onActivit
             <span className="h-2.5 w-2.5 rounded-full bg-coral" aria-hidden />
             <span className="h-2.5 w-2.5 rounded-full bg-sun" aria-hidden />
             <span className="h-2.5 w-2.5 rounded-full bg-teal" aria-hidden />
-            <span className="ml-2 font-mono text-xs text-code-line">{language}</span>
+            <span className="ml-2 font-mono text-xs text-code-fg/75">{language}</span>
             {wt && predictions > 0 && (
               <span className="ml-auto text-xs font-semibold text-sun">
                 {predictions === 1 ? "Includes a prediction" : `Includes ${predictions} predictions`}
@@ -113,7 +113,7 @@ export function CodeExample({ block, onActivity }: { block: CodeBlock; onActivit
 export function PrintedOutput({ lines }: { lines: string[] }) {
   return (
     <div className="border-t border-code-line/30 px-4 py-3 font-mono text-sm text-code-fg" role="group" aria-label="Printed output">
-      <div className="mb-1 flex items-center gap-1.5 font-sans text-xs font-semibold text-code-line">
+      <div className="mb-1 flex items-center gap-1.5 font-sans text-xs font-semibold text-code-fg/75">
         <Terminal className="h-3.5 w-3.5" aria-hidden /> Printed output
       </div>
       {lines.map((line, i) => (
