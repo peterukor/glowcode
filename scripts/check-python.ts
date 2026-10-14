@@ -4,8 +4,11 @@
  * lesson or walkthrough claims:
  *
  * - code blocks: the printed output matches `output`
- * - walkthroughs (lessons and playground): the printed output matches the last step, and
- *   the final variables match the last step's `vars`
+ * - walkthroughs (lessons, playground, manual): the printed output matches the last step, and
+ *   the final variables match the last step's `vars`; then every step is replayed against a
+ *   line-by-line recording of the real run (src/walkthrough/replay.ts): the order of lines,
+ *   the variables and output after each event, each calculation and its operand values, and
+ *   every condition the walkthrough says was True or False
  * - debug questions: the program fails with exactly the error shown in `errorOutput`
  * - predict questions: the answer matches the first line the program prints
  * - practice solutions: they run without errors
@@ -23,6 +26,7 @@ import { examples } from "@/data/examples";
 import { allReferences } from "@/references/registry";
 import type { PyValue, Variables } from "@/types/python";
 import type { Walkthrough } from "@/types/trace";
+import { matchRecording, replayable, type EvalRequest, type RecordedEvent } from "@/walkthrough/replay";
 
 type Run = { stdout: string[]; stderr: string; ok: boolean; vars: Record<string, unknown> };
 
@@ -75,10 +79,87 @@ function run(code: string, dumpVars = false, input?: string[]): Run {
   return { stdout: stdout ? stdout.split("\n") : [], stderr, ok: r.status === 0, vars };
 }
 
+// Records every module-level line event: the line about to run, the simple global variables
+// (copied through JSON so later changes to a list don't rewrite history) and the output so far.
+const TRACER = `
+import io, json, sys
+_code = compile(open("main.py").read(), "main.py", "exec")
+_buf = io.StringIO()
+_simple = (int, float, str, bool, list, type(None))
+def _snap(g):
+    return json.loads(json.dumps({k: v for k, v in g.items() if not k.startswith("_") and isinstance(v, _simple)}))
+_events = []
+_g = {"__name__": "__main__"}
+def _trace(frame, event, arg):
+    if frame.f_code is not _code:
+        return None
+    if event == "line":
+        _events.append({"line": frame.f_lineno, "vars": _snap(frame.f_globals), "out": _buf.getvalue()})
+    return _trace
+_real = sys.stdout
+sys.stdout = _buf
+sys.settrace(_trace)
+try:
+    exec(_code, _g)
+finally:
+    sys.settrace(None)
+    sys.stdout = _real
+_events.append({"line": None, "vars": _snap(_g), "out": _buf.getvalue()})
+with open("__trace.json", "w") as _f:
+    json.dump(_events, _f)
+`;
+
+// Evaluates expressions with a recorded event's variables and compares them (by repr) with
+// what the walkthrough claims.
+const EVALUATOR = `
+import ast, json
+_results = []
+for _r in json.load(open("__eval.json")):
+    try:
+        _got = eval(_r["expr"], {}, dict(_r["vars"]))
+        _results.append({"ok": repr(_got) == repr(ast.literal_eval(_r["expect"])), "got": repr(_got)})
+    except Exception as _e:
+        _results.append({"ok": False, "got": f"{type(_e).__name__}: {_e}"})
+json.dump(_results, open("__evalout.json", "w"))
+`;
+
+function python(script: string, files: Record<string, string>) {
+  for (const [name, content] of Object.entries(files)) writeFileSync(join(dir, name), content);
+  writeFileSync(join(dir, "__script.py"), script);
+  const r = spawnSync("python3", ["-I", "__script.py"], { cwd: dir, encoding: "utf8", timeout: 10_000 });
+  if (r.error) throw new Error(`Couldn't run python3: ${r.error.message}`);
+  return r;
+}
+
+const replayed = new Set<Walkthrough>();
+
+/** Replays a walkthrough step by step against a recording of the real run. */
+function checkSteps(w: Walkthrough, where: string) {
+  if (replayed.has(w)) return;
+  replayed.add(w);
+  if (!replayable(w)) return; // functions and input() are checked by their final state only
+  checked++;
+  const traced = python(TRACER, { "main.py": w.code });
+  if (traced.status !== 0) {
+    problems.push(`${where}: walkthrough "${w.id}" fails under the tracer:\n${traced.stderr}`);
+    return;
+  }
+  const events = JSON.parse(readFileSync(join(dir, "__trace.json"), "utf8")) as RecordedEvent[];
+  const { problems: mismatches, evals } = matchRecording(w, events);
+  problems.push(...mismatches.map((m) => `${where}: ${m}`));
+  if (!evals.length) return;
+  python(EVALUATOR, { "__eval.json": JSON.stringify(evals.map((e: EvalRequest) => ({ ...e, vars: events[e.at]!.vars }))) });
+  const results = JSON.parse(readFileSync(join(dir, "__evalout.json"), "utf8")) as { ok: boolean; got: string }[];
+  results.forEach((r, i) => {
+    if (!r.ok) problems.push(`${where}: walkthrough "${w.id}" ${evals[i]!.what}: the walkthrough says ${evals[i]!.expect}, Python gives ${r.got}`);
+  });
+}
+
 const show = (lines: string[]) => JSON.stringify(lines);
 const pyJson = (v: PyValue) => (v.type === "None" ? null : v.value);
 
 function checkWalkthrough(w: Walkthrough, where: string) {
+  checkSteps(w, where);
   checked++;
   const last = w.steps.at(-1)!;
   const r = run(w.code, true);
