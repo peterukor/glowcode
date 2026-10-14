@@ -66,6 +66,9 @@
 
 :root {
   --radius: 1rem;
+  /* Motion: strong custom curves (the built-in ones are too weak to read as intentional). */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --grape: oklch(0.58 0.22 293);
   --sky: oklch(0.64 0.18 250);
   --teal: oklch(0.7 0.14 175);
@@ -363,34 +366,6 @@
 .fn-arrow[data-on] {
   color: var(--viz-active);
 }
-.viz-edge {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding-left: 1rem;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted-foreground);
-  opacity: var(--viz-idle-opacity);
-  transition:
-    opacity var(--viz-speed) ease,
-    color var(--viz-speed) ease;
-}
-.viz-edge[data-on] {
-  opacity: 1;
-  color: var(--viz-active);
-}
-.viz-edge-back {
-  flex-direction: column;
-  justify-content: center;
-  border: 2px dashed var(--border);
-  border-left: 0;
-  border-radius: 0 1rem 1rem 0;
-  padding: 0.5rem 0.4rem;
-}
-.viz-edge-back[data-on] {
-  border-color: var(--viz-active);
-}
 .viz-result {
   border-radius: 999px;
   padding: 0.05rem 0.55rem;
@@ -440,7 +415,6 @@
   .fn-node,
   .fn-slot,
   .viz-node,
-  .viz-edge,
   .calc-arrow,
   .fn-arrow {
     transition: none;
@@ -626,325 +600,582 @@
   }
 }
 
-/* ------------------------------------------------ dicts and sets */
+/* ------------------------------------------------ diagram stage
+   Every diagram sits on one calm, dark canvas: the same ink as the code editor, so the code
+   and its picture read as a pair, and glows read clearly in light and dark mode. The stage
+   carries the `dark` class, so everything inside uses the dark-theme tokens. */
 
-.dict-table {
-  border-collapse: separate;
-  border-spacing: 0;
-  overflow: hidden;
-  border: 2px solid color-mix(in srgb, var(--t-dict) 60%, transparent);
-  border-radius: 0.9rem;
-  background: color-mix(in srgb, var(--t-dict) 5%, var(--card));
-  font-family: var(--font-mono, monospace);
-  font-size: 0.9rem;
+.viz-stage {
+  --stage: oklch(0.205 0.035 283);
+  position: relative;
+  border-radius: 1.25rem;
+  padding: 1.25rem 1rem;
+  color: var(--foreground);
+  background-color: var(--stage);
+  background-image: radial-gradient(circle at 1px 1px, oklch(1 0 0 / 0.075) 1px, transparent 1.5px);
+  background-size: 20px 20px;
+  background-position: 10px 10px;
+  box-shadow:
+    inset 0 0 0 1px oklch(1 0 0 / 0.06),
+    inset 0 1px 0 oklch(1 0 0 / 0.05);
 }
-.dict-table tr + tr > * {
-  border-top: 2px solid color-mix(in srgb, var(--t-dict) 25%, transparent);
+@media (min-width: 640px) {
+  .viz-stage {
+    padding: 1.5rem;
+  }
 }
-.dict-key,
-.dict-value {
-  padding: 0.3rem 0.75rem;
-  text-align: left;
-  font-weight: 700;
-  transition: background-color 0.25s ease;
-}
-.dict-arrow {
-  padding: 0 0.25rem;
+.viz-caption-line {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--muted-foreground);
 }
-.dict-table tr[data-state="active"] > * {
-  background: color-mix(in srgb, var(--viz-active) 22%, var(--card));
-  box-shadow:
-    inset 0 2px 0 var(--viz-active),
-    inset 0 -2px 0 var(--viz-active);
-  color: var(--foreground);
+
+/* ------------------------------------------------ loop flowcharts (SVG)
+   Built from the flow tree's parts (.flow-*): the same boxes, frames, lines, pills and looks.
+   These rules add the decision diamond, arrowheads, the "done" look and the travelling value. */
+
+.flow-decision-shape {
+  fill: var(--card);
+  stroke: color-mix(in srgb, var(--flow-keyword) 75%, transparent);
+  stroke-width: 2;
+  stroke-linejoin: round;
 }
-.dict-table tr[data-state="active"] > :first-child {
-  box-shadow:
-    inset 2px 0 0 var(--viz-active),
-    inset 0 2px 0 var(--viz-active),
-    inset 0 -2px 0 var(--viz-active);
-}
-.dict-table tr[data-state="active"] > :last-child {
-  box-shadow:
-    inset -2px 0 0 var(--viz-active),
-    inset 0 2px 0 var(--viz-active),
-    inset 0 -2px 0 var(--viz-active);
-}
-.dict-table tr[data-state="active"] .dict-arrow {
-  color: var(--viz-active);
-}
-.dict-table tr[data-state="changed"] > * {
-  background: color-mix(in srgb, var(--sun) 22%, transparent);
-}
-.dict-table tr[data-state="added"] > * {
-  background: color-mix(in srgb, var(--teal) 18%, transparent);
-}
-.seq-note.static {
-  position: static;
-}
-.set-box {
-  display: flex;
-  max-width: 28rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  border: 2px dashed color-mix(in srgb, var(--t-set) 60%, transparent);
-  border-radius: 2rem;
-  background: color-mix(in srgb, var(--t-set) 5%, var(--card));
-  padding: 0.75rem 1rem;
-}
-.set-item {
-  border: 2px solid color-mix(in srgb, var(--t-set) 45%, transparent);
-  border-radius: 999px;
-  background: var(--card);
-  padding: 0.1rem 0.6rem;
-  font-family: var(--font-mono, monospace);
+.flow .flow-decision-text {
   font-weight: 700;
-  transition:
-    box-shadow 0.25s ease,
-    border-color 0.25s ease;
+  text-anchor: middle;
 }
-.set-item[data-state="active"] {
-  border-color: var(--viz-active);
-  box-shadow: var(--viz-glow);
+.flow .flow-decision-caption {
+  text-anchor: middle;
 }
-.set-item[data-state="added"] {
-  border-color: var(--teal);
-  background: color-mix(in srgb, var(--teal) 18%, var(--card));
+.flow-decision[data-look="lit"] .flow-decision-shape {
+  stroke: var(--flow-lit);
+  fill: color-mix(in srgb, var(--flow-lit) 14%, var(--card));
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--flow-lit) 60%, transparent));
+}
+.flow-decision[data-look="true"] .flow-decision-shape {
+  stroke: var(--flow-true);
+  fill: color-mix(in srgb, var(--flow-true) 14%, var(--card));
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--flow-true) 55%, transparent));
+}
+.flow-decision[data-look="false"] .flow-decision-shape {
+  stroke: var(--flow-false);
+  fill: color-mix(in srgb, var(--flow-false) 12%, var(--card));
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--flow-false) 45%, transparent));
+}
+.flow-answer rect {
+  stroke-width: 1.5;
+}
+.flow-answer text {
+  font: 700 11px var(--font-sans);
+  text-anchor: middle;
+}
+.flow-answer[data-tone="true"] rect {
+  fill: color-mix(in srgb, var(--flow-true) 22%, var(--card));
+  stroke: var(--flow-true);
+}
+.flow-answer[data-tone="true"] text {
+  fill: color-mix(in srgb, var(--flow-true) 70%, var(--foreground));
+}
+.flow-answer[data-tone="false"] rect {
+  fill: color-mix(in srgb, var(--flow-false) 18%, var(--card));
+  stroke: var(--flow-false);
+}
+.flow-answer[data-tone="false"] text {
+  fill: color-mix(in srgb, var(--flow-false) 75%, var(--foreground));
 }
 
-/* ------------------------------------------------ loop flowcharts
-   for and while share the decision diamond, edges, loop-back and operation boxes. */
-
-.viz-decision-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
+/* arrowheads follow their line's look */
+.flow-arrow {
+  fill: var(--flow-idle);
 }
-.viz-decision {
-  /* A wide diamond: the shape says "a question with two ways out". */
-  position: relative;
-  display: grid;
-  min-width: 13rem;
-  place-items: center;
-  padding: 0.9rem 2.6rem;
-  opacity: var(--viz-idle-opacity);
-  transition:
-    opacity var(--viz-speed) ease,
-    filter var(--viz-speed) ease;
+.flow-edge[data-look="lit"] .flow-arrow {
+  fill: var(--flow-lit);
+  filter: drop-shadow(0 0 4px var(--flow-lit));
 }
-.viz-decision::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  background: var(--border);
-  transition: background-color var(--viz-speed) ease;
+.flow-edge[data-look="true"] .flow-arrow {
+  fill: var(--flow-true);
 }
-.viz-decision::after {
-  content: "";
-  position: absolute;
-  inset: 2px 4px;
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  background: var(--card);
+.flow-edge[data-look="false"] .flow-arrow {
+  fill: color-mix(in srgb, var(--flow-false) 70%, transparent);
 }
-.viz-decision-text {
-  position: relative;
-  z-index: 1;
-  text-align: center;
+.flow-edge[data-look="dim"] .flow-arrow {
+  opacity: 0.35;
 }
-.viz-decision[data-on] {
+/* "done": the way Python went on an earlier lap — solid, quietly violet, no glow */
+.flow-edge[data-look="done"] .flow-edge-line {
+  stroke: color-mix(in srgb, var(--flow-lit) 45%, var(--flow-idle));
+}
+.flow-edge[data-look="done"] .flow-arrow {
+  fill: color-mix(in srgb, var(--flow-lit) 45%, var(--flow-idle));
+}
+.flow-block[data-look="done"] .flow-block-box {
+  stroke: color-mix(in srgb, var(--flow-lit) 45%, var(--border));
+}
+.loopflow .flow-label[data-tone="neutral"] rect {
+  fill: color-mix(in srgb, var(--flow-lit) 14%, var(--card));
+  stroke: color-mix(in srgb, var(--flow-lit) 55%, transparent);
+}
+.loopflow .flow-label[data-tone="neutral"] text {
+  fill: color-mix(in srgb, var(--flow-lit) 55%, var(--foreground));
+}
+.loopflow .flow-label[data-look="idle"] {
+  opacity: 0.75;
+}
+.loopflow .flow-label[data-look="lit"] {
   opacity: 1;
-  filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--viz-active) 45%, transparent));
 }
-.viz-decision[data-on]::before {
-  background: var(--viz-active);
+
+/* the value a loop picked, travelling along the flowchart */
+.loop-chip {
+  transform: translate(var(--tx), var(--ty));
+  animation: loop-chip-travel 560ms var(--ease-in-out) both;
 }
-.viz-decision[data-on]::after {
-  background: color-mix(in srgb, var(--viz-active) 8%, var(--card));
-}
-.viz-op {
-  align-items: flex-start;
-}
-.viz-node[data-done] {
-  opacity: 0.4;
-}
-.flow-branch {
-  /* The left edge is the "no" way out of the decision, running past the branch to the exit. */
-  position: relative;
-  margin-left: 1.15rem;
-  padding-left: 0.9rem;
-}
-.flow-branch::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: -0.5rem;
-  bottom: -0.5rem;
-  border-left: 2px dashed var(--border);
-  transition: border-color var(--viz-speed) ease;
-}
-.flow-branch[data-exit]::before {
-  border-left-style: solid;
-  border-color: var(--viz-active);
-}
-.flow-branch + .viz-edge {
-  /* The exit edge continues the "no" line. */
-  padding-left: 0.85rem;
-}
-.for-transfer-chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.3rem;
-  margin-left: 0.4rem;
-  border: 2px solid var(--viz-active);
-  border-radius: 999px;
-  background: var(--card);
-  box-shadow: var(--viz-glow);
-  padding: 0 0.6rem;
-  font-family: var(--font-mono, monospace);
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--foreground);
-  animation: value-travel 0.45s ease both;
-}
-@keyframes value-travel {
+@keyframes loop-chip-travel {
   from {
-    transform: translateY(-1.6rem);
-    opacity: 0.2;
+    transform: translate(var(--fx), var(--fy)) scale(1.08);
   }
-  to {
-    transform: none;
-    opacity: 1;
+  70% {
+    transform: translate(var(--tx), var(--ty)) scale(1.04);
   }
+}
+.loop-chip-box {
+  fill: var(--card);
+  stroke: var(--flow-lit);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--flow-lit) 75%, transparent));
+}
+.flow .loop-chip-text {
+  font: 700 14px var(--font-mono);
+  text-anchor: middle;
+}
+
+/* the iterable: one segmented container, indexes underneath */
+.strip {
+  --strip-tone: var(--t-list);
+}
+.strip[data-tone="tuple"] {
+  --strip-tone: var(--t-tuple);
+}
+.strip[data-tone="str"] {
+  --strip-tone: var(--t-str);
+}
+.strip[data-tone="neutral"] {
+  --strip-tone: var(--sky);
+}
+.flow .strip-label {
+  font: 600 14px var(--font-mono);
+  text-anchor: middle;
+}
+.flow .strip-kw {
+  fill: var(--syn-kw);
+}
+.strip-box {
+  fill: color-mix(in srgb, var(--strip-tone) 9%, var(--card));
+  stroke: var(--strip-tone);
+  stroke-width: 2;
+}
+.strip-divider {
+  stroke: color-mix(in srgb, var(--strip-tone) 40%, transparent);
+  stroke-width: 1.5;
+}
+.flow .strip-more {
+  font: 700 16px var(--font-sans);
+  text-anchor: middle;
+  fill: var(--muted-foreground);
+  opacity: 0;
+}
+.flow .strip-more[data-show] {
+  opacity: 1;
+}
+.flow .strip-slide {
+  transform: translateX(var(--strip-shift, 0px));
+  transition: transform 380ms var(--ease-in-out);
+}
+.flow .strip-cell-lift {
+  transition: transform 320ms var(--ease-out);
+}
+.strip-cell-box {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 2;
+}
+.flow .strip-value {
+  font: 700 15px var(--font-mono);
+  text-anchor: middle;
+}
+.flow .strip-index {
+  font: 600 11px var(--font-mono);
+  text-anchor: middle;
+  fill: var(--muted-foreground);
+}
+.flow .strip-tick {
+  font: 700 10px var(--font-sans);
+  text-anchor: middle;
+  fill: var(--flow-true);
+}
+.flow .strip-cell[data-state="raised"] .strip-cell-lift {
+  transform: translateY(-11px);
+}
+.strip-cell[data-state="raised"] .strip-cell-box {
+  fill: var(--card);
+  stroke: var(--flow-lit);
+  filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--flow-lit) 70%, transparent));
+}
+.strip-cell[data-state="active"] .strip-cell-box {
+  fill: color-mix(in srgb, var(--flow-lit) 24%, var(--card));
+  stroke: var(--flow-lit);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--flow-lit) 60%, transparent));
+}
+.flow .strip-cell[data-state="raised"] .strip-index,
+.flow .strip-cell[data-state="active"] .strip-index {
+  fill: var(--flow-lit);
+  font-weight: 800;
+}
+.flow .strip-cell[data-state="visited"] .strip-value {
+  opacity: 0.38;
+}
+.flow .strip-cell[data-state="pending"] .strip-value {
+  fill: var(--muted-foreground);
+}
+.strip-cell[data-state="pending"] .strip-cell-box {
+  stroke: color-mix(in srgb, var(--muted-foreground) 45%, transparent);
+  stroke-dasharray: 4 4;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .viz-decision,
-  .flow-branch::before {
+  .flow .strip-slide,
+  .flow .strip-cell-lift {
     transition: none;
   }
-  .for-transfer-chip {
+  .flow .strip-cell[data-state="raised"] .strip-cell-lift {
+    /* Still clearly picked (outlined and glowing), just without the movement. */
+    transform: none;
+  }
+  .loop-chip {
+    animation: loop-chip-fade 200ms ease both;
+  }
+  @keyframes loop-chip-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+
+/* ------------------------------------------------ objects (lists, tuples, dicts, sets) in SVG
+   Names on the left as tags, an arrow from each name to its object. */
+
+.binding-line {
+  fill: none;
+  stroke: var(--flow-idle);
+  stroke-width: 2;
+}
+.binding-arrow {
+  fill: var(--flow-idle);
+}
+.binding-link[data-look="lit"] .binding-line {
+  stroke: var(--flow-lit);
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 4px var(--flow-lit));
+}
+.binding-link[data-look="lit"] .binding-arrow {
+  fill: var(--flow-lit);
+}
+.name-pill {
+  fill: var(--card);
+  stroke: color-mix(in srgb, var(--foreground) 55%, transparent);
+  stroke-width: 2;
+}
+.binding-link[data-look="lit"] .name-pill {
+  stroke: var(--flow-lit);
+}
+.flow .name-pill-text {
+  font: 700 14px var(--font-mono);
+  text-anchor: middle;
+}
+.flow .object-tag {
+  font: 700 11px var(--font-sans);
+  fill: var(--muted-foreground);
+  letter-spacing: 0.02em;
+}
+.object-chip-box {
+  fill: var(--card);
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+.flow .object-chip-text {
+  font: 700 12px var(--font-sans);
+}
+.flow .object-chip-value {
+  font: 700 13px var(--font-mono);
+}
+.object-chip[data-tone="removed"] .object-chip-box {
+  fill: color-mix(in srgb, var(--flow-false) 14%, var(--card));
+  stroke: var(--flow-false);
+  stroke-dasharray: 5 4;
+}
+.flow .object-chip[data-tone="removed"] .object-chip-arrow {
+  fill: var(--flow-false);
+}
+.object-chip[data-tone="returned"] .object-chip-box {
+  fill: color-mix(in srgb, var(--flow-lit) 16%, var(--card));
+  stroke: var(--flow-lit);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--flow-lit) 60%, transparent));
+}
+.object-chip[data-tone="true"] .object-chip-box {
+  fill: color-mix(in srgb, var(--flow-true) 16%, var(--card));
+  stroke: var(--flow-true);
+}
+.object-chip[data-tone="false"] .object-chip-box {
+  fill: color-mix(in srgb, var(--flow-false) 14%, var(--card));
+  stroke: var(--flow-false);
+}
+.flow .object-chip[data-tone="note"] .object-chip-text {
+  fill: var(--muted-foreground);
+}
+.object-chip[data-tone="note"] .object-chip-box {
+  fill: transparent;
+  stroke: color-mix(in srgb, var(--muted-foreground) 35%, transparent);
+}
+/* what left an object, or came back from it, slides out from the object */
+.object-chip[data-tone="removed"],
+.object-chip[data-tone="returned"] {
+  animation: chip-out 420ms var(--ease-out) both;
+}
+@keyframes chip-out {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+.strip-cell[data-state="selected"] .strip-cell-box {
+  fill: color-mix(in srgb, var(--flow-lit) 22%, var(--card));
+  stroke: var(--flow-lit);
+}
+.strip-cell[data-state="added"] .strip-cell-box {
+  fill: color-mix(in srgb, var(--flow-true) 22%, var(--card));
+  stroke: var(--flow-true);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--flow-true) 60%, transparent));
+}
+.strip-cell[data-state="changed"] .strip-cell-box {
+  fill: color-mix(in srgb, var(--sun) 20%, var(--card));
+  stroke: var(--sun);
+}
+.flow .strip-cell[data-state="selected"] .strip-index,
+.flow .strip-cell[data-state="added"] .strip-index,
+.flow .strip-cell[data-state="changed"] .strip-index {
+  fill: var(--foreground);
+  font-weight: 800;
+}
+.flow .strip-index-neg {
+  fill: color-mix(in srgb, var(--muted-foreground) 75%, transparent);
+}
+.flow .strip-note {
+  font: 700 10.5px var(--font-sans);
+  text-anchor: middle;
+  fill: var(--flow-lit);
+}
+.strip-empty {
+  stroke-dasharray: 5 4;
+}
+
+.dict-svg-box {
+  fill: color-mix(in srgb, var(--t-dict) 8%, var(--card));
+  stroke: var(--t-dict);
+  stroke-width: 2;
+}
+.dict-row-box {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 2;
+}
+.dict-row + .dict-row .dict-row-box {
+  stroke: transparent;
+}
+.dict-row[data-state="active"] .dict-row-box {
+  fill: color-mix(in srgb, var(--flow-lit) 24%, var(--card));
+  stroke: var(--flow-lit);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--flow-lit) 60%, transparent));
+}
+.dict-row[data-state="changed"] .dict-row-box {
+  fill: color-mix(in srgb, var(--sun) 20%, var(--card));
+  stroke: var(--sun);
+}
+.dict-row[data-state="added"] .dict-row-box {
+  fill: color-mix(in srgb, var(--flow-true) 20%, var(--card));
+  stroke: var(--flow-true);
+}
+.flow .dict-key,
+.flow .dict-value {
+  font: 700 14px var(--font-mono);
+}
+.flow .dict-arrow {
+  font: 700 14px var(--font-sans);
+  fill: var(--muted-foreground);
+}
+.flow .dict-was {
+  font: 700 10.5px var(--font-sans);
+  fill: var(--flow-lit);
+}
+.set-svg-box {
+  fill: color-mix(in srgb, var(--t-set) 7%, var(--card));
+  stroke: var(--t-set);
+  stroke-width: 2;
+  stroke-dasharray: 7 5;
+}
+.set-item-box {
+  fill: var(--card);
+  stroke: color-mix(in srgb, var(--t-set) 70%, transparent);
+  stroke-width: 2;
+}
+.set-item-svg[data-state="active"] .set-item-box {
+  fill: color-mix(in srgb, var(--flow-lit) 24%, var(--card));
+  stroke: var(--flow-lit);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--flow-lit) 60%, transparent));
+}
+.set-item-svg[data-state="added"] .set-item-box {
+  fill: color-mix(in srgb, var(--flow-true) 22%, var(--card));
+  stroke: var(--flow-true);
+}
+@media (prefers-reduced-motion: reduce) {
+  .object-chip[data-tone="removed"],
+  .object-chip[data-tone="returned"] {
+    animation: loop-chip-fade 200ms ease both;
+  }
+}
+
+
+/* ------------------------------------------------ call stack (SVG) */
+.stack-card-box {
+  fill: var(--card);
+  stroke: color-mix(in srgb, var(--grape) 35%, var(--border));
+  stroke-width: 2;
+}
+.stack-card[data-look="lit"] .stack-card-box {
+  stroke: var(--flow-lit);
+  fill: color-mix(in srgb, var(--flow-lit) 10%, var(--card));
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--flow-lit) 55%, transparent));
+}
+.stack-card[data-look="waiting"] {
+  opacity: 0.8;
+}
+.stack-card[data-look="ghost"] {
+  opacity: 0.45;
+  animation: stack-leave 520ms var(--ease-out) both;
+}
+.stack-card[data-look="ghost"] .stack-card-box {
+  stroke-dasharray: 6 6;
+  fill: transparent;
+}
+@keyframes stack-leave {
+  from {
+    opacity: 1;
+    transform: translateY(10px);
+  }
+}
+.flow .stack-title {
+  font: 700 15px var(--font-mono);
+}
+.flow .stack-status {
+  font: 700 11px var(--font-sans);
+  fill: var(--muted-foreground);
+}
+.stack-card[data-look="lit"] .stack-status {
+  fill: color-mix(in srgb, var(--flow-lit) 60%, var(--foreground));
+}
+.stack-var-box {
+  fill: var(--background);
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+.flow .stack-var-text {
+  font: 600 13px var(--font-mono);
+  text-anchor: middle;
+}
+.stack-svg .flow-label[data-tone="lit"] rect {
+  fill: color-mix(in srgb, var(--flow-lit) 18%, var(--card));
+  stroke: var(--flow-lit);
+}
+.stack-svg .flow-label[data-tone="neutral"] rect {
+  fill: var(--card);
+  stroke: color-mix(in srgb, var(--flow-lit) 40%, var(--border));
+}
+.stack-svg .flow-label text {
+  fill: var(--foreground);
+}
+@media (prefers-reduced-motion: reduce) {
+  .stack-card[data-look="ghost"] {
     animation: none;
   }
 }
 
-/* ------------------------------------------------ expression trees */
 
-.expr-tree {
-  display: flex;
-  width: max-content;
-  max-width: 100%;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 0.25rem;
+/* ------------------------------------------------ function calls (SVG) */
+.flow .fn-caption-svg {
+  text-anchor: middle;
 }
-.expr-tree > .expr-node,
-.expr-tree > .expr-leaf {
-  max-width: 100%;
+.fn-arg-box {
+  fill: var(--background);
+  stroke: var(--border);
+  stroke-width: 1.5;
 }
-.expr-down {
-  align-self: center;
-  width: max-content;
-  color: var(--border);
-  font-size: 1.1rem;
-  line-height: 1.4;
-  transition: color var(--viz-speed) ease;
+.fn-input[data-look="lit"] .fn-arg-box {
+  stroke: color-mix(in srgb, var(--flow-lit) 70%, transparent);
 }
-.expr-down[data-on] {
-  color: var(--viz-active);
+.flow .fn-arg-text {
+  font: 700 14px var(--font-mono);
+  text-anchor: middle;
 }
-.expr-node {
-  --expr-line: var(--border);
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
+.flow .fn-name {
+  font: 800 17px var(--font-mono);
+  text-anchor: middle;
 }
-.expr-node[data-state="active"],
-.expr-node[data-state="done"] {
-  --expr-line: var(--viz-active);
+.fn-machine .flow-block-box {
+  stroke-width: 2.5;
 }
-.expr-children {
-  display: flex;
-  align-items: flex-end;
+.flow .fn-slot-title {
+  font-weight: 800;
+  fill: var(--foreground);
 }
-/* Each child gets a line down to a shared bar; the bar joins the children over the stem. */
-.expr-child {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0 0.35rem 0.7rem;
+.flow .fn-tail-text {
+  text-anchor: middle;
 }
-.expr-child::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  height: 0.7rem;
-  border-left: 2px solid var(--expr-line);
-  transition: border-color var(--viz-speed) ease;
+.fn-out[data-kind="prints"] .flow-block-box {
+  fill: var(--code-bg);
 }
-.expr-child::before {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  border-top: 2px solid var(--expr-line);
-  transition: border-color var(--viz-speed) ease;
+.flow .fn-out[data-kind="prints"][data-shown] .fn-slot-value {
+  fill: var(--code-fg);
 }
-.expr-child:first-child::before {
-  left: 50%;
-  right: 0;
+.fn-out[data-kind="returns"][data-look="lit"] .flow-block-box {
+  stroke-dasharray: 6 4;
 }
-.expr-child:last-child::before {
-  left: 0;
-  right: calc(50% - 2px);
+.flow .fn-out:not([data-shown]) .fn-slot-value {
+  fill: var(--muted-foreground);
 }
-.expr-stem {
-  height: 0.6rem;
-  border-left: 2px solid var(--expr-line);
-  transition: border-color var(--viz-speed) ease;
+
+
+/* expression trees in SVG */
+.flow .expr-value {
+  font: 700 15px var(--font-mono);
+  text-anchor: middle;
 }
-.expr-op {
-  align-items: center;
-  min-width: 3.25rem;
-  padding-block: 0.3rem;
+.flow .expr-caption {
+  text-anchor: middle;
 }
-.expr-op-line {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.35rem;
+.flow .expr-symbol-svg {
+  font-size: 17px;
+  font-weight: 800;
+  fill: var(--syn-kw);
 }
-.expr-symbol {
-  font-size: 1.15rem;
+.flow .expr-result-svg {
+  fill: color-mix(in srgb, var(--flow-lit) 55%, var(--foreground));
   font-weight: 800;
 }
-.expr-result {
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--viz-active);
-}
-.expr-node[data-state="done"] > .expr-op {
-  opacity: 1;
-  border-color: color-mix(in srgb, var(--viz-active) 45%, var(--border));
-}
-/* While an operator is worked out, the values flowing into it glow too. */
-.expr-node[data-state="active"] > .expr-children > .expr-child > .expr-leaf,
-.expr-node[data-state="active"] > .expr-children > .expr-child > .expr-node[data-state="done"] > .expr-op {
-  border-color: var(--viz-active);
-  opacity: 1;
-}
-@media (prefers-reduced-motion: reduce) {
-  .expr-child::before,
-  .expr-child::after,
-  .expr-stem,
-  .expr-down {
-    transition: none;
-  }
-}
-.loop-body[data-skipped] {
-  opacity: 0.35;
+.expr-op-svg[data-look="done"] .flow-block-box {
+  stroke: color-mix(in srgb, var(--flow-lit) 55%, var(--border));
 }
 
 /* -------------------------------------------------- conditional flow tree
@@ -1559,4 +1790,14 @@
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* In a loop the body frame only says "we're inside the body"; the running line carries the glow. */
+.loopflow .loop-frame[data-look="lit"] .flow-frame-box {
+  stroke: color-mix(in srgb, var(--flow-lit) 70%, transparent);
+  fill: color-mix(in srgb, var(--flow-lit) 5%, var(--card));
+  filter: none;
+}
+.loopflow .flow-frame-box {
+  fill: color-mix(in srgb, var(--flow-keyword) 3%, var(--card));
 }

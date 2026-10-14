@@ -1,109 +1,179 @@
+import { useId, useMemo } from "react";
 import type { Variables } from "@/types/python";
 import type { ForLoopShape, ForLoopTrace } from "@/types/trace";
-import { DecisionNode, FlowEdge, LoopBack, LoopBranch, OperationNode } from "./FlowParts";
-import { SegmentedSequence, type CellState } from "./SegmentedSequence";
+import { collectionWindow } from "./collectionWindow";
+import { CHAR_W } from "./flow/geometry";
+import { LoopDiagram, type LoopLooks, type TravellingChip } from "./loops/LoopDiagram";
+import { layoutLoop } from "./loops/loopLayout";
+import { SequenceStrip, stripCellCentre, stripSize, type StripTone } from "./loops/SequenceStrip";
+import type { CellState } from "./SegmentedSequence";
 import { formatValue, pyItem } from "./values";
 
 const KIND_CAPTION: Record<ForLoopShape["kind"], string> = {
-  list: "a list: the loop takes its items in order",
-  tuple: "a tuple: the loop takes its items in order",
-  str: "a string: the loop takes one character at a time",
-  range: "range makes each number only when the loop asks for the next one",
-  dict: "looping over a dict gives its keys",
-  set: "a set has no guaranteed order; this is the order this run produced",
-  generator: "a generator makes each value only when asked, so later values aren't known yet",
+  list: "A list: the loop takes its items in order.",
+  tuple: "A tuple: the loop takes its items in order.",
+  str: "A string: the loop takes one character at a time.",
+  range: "range() makes each number only when the loop asks for the next one.",
+  dict: "Looping over a dict gives its keys.",
+  set: "A set has no guaranteed order; this is the order this run produced.",
+  generator: "A generator makes each value only when asked, so later values aren't known yet.",
+};
+
+const TONE: Record<ForLoopShape["kind"], StripTone> = {
+  list: "list",
+  tuple: "tuple",
+  str: "str",
+  range: "neutral",
+  dict: "neutral",
+  set: "neutral",
+  generator: "neutral",
 };
 
 /**
  * A `for` loop as a flowchart joined to its iterable:
  *
- *   iterable (segmented)  →  Next item available?  —No→  after the loop
- *                                  │ Yes
- *                         number = <item>
- *                                  │
- *                               body ...  ↺ back to "Next item available?"
+ *   iterable (segmented)
+ *          │
+ *   ◇ Next item available? ──No──▶ after the loop
+ *          │ Yes
+ *   [ number = 10 ]   ◀── the picked value travels here
+ *          │
+ *   body …  ↺ back to the question
  *
- * The current item rises out of its cell and glows when Python takes it ("next"), a copy of
- * its value travels to the loop variable ("assign"), then it settles back into place while the
- * body runs. Earlier items are marked done; the collection itself never loses an item.
- * Everything is derived from the step, so Previous and Reset always show the right state.
+ * When Python asks for the next item, it lifts out of its cell and travels down to the
+ * question; once assigned, it travels on into the loop variable. While the body runs it
+ * settles back in its cell, and finished items fade with a tick. The collection never loses
+ * an item. Everything is derived from the step, so Previous and Reset always match.
  */
 export function ForLoopView({ shape, trace, vars }: { shape: ForLoopShape; trace?: ForLoopTrace; vars: Variables }) {
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const n = shape.items.length;
   const at = trace?.at;
   const index = trace?.index ?? -1;
   const current = index >= 0 && index < n ? shape.items[index] : undefined;
   const produced = shape.kind === "range" || shape.kind === "generator";
+  const strings = shape.kind === "str";
+  const assigning = at === "assign";
+  // A generator is asked for another value before anyone knows whether it has one.
+  const asking = at === "next" && (index >= n || shape.kind === "generator");
+  const answeredYes = (at === "next" && !asking) || (assigning && shape.kind === "generator");
+  const show = (x: (typeof shape.items)[number]) => (strings ? `"${String(x)}"` : pyItem(x));
+  const variable = vars[shape.target];
 
+  const strip = stripSize(shape.items, strings, { label: true });
+  const longest = Math.max(...shape.items.map((x) => show(x).length), 1);
+  const layout = useMemo(
+    () =>
+      layoutLoop({
+        header: { w: strip.w, h: strip.h },
+        question: "Next item available?",
+        yes: "Yes",
+        no: "No",
+        target: `${shape.target} = ${"x".repeat(longest + 1)}`,
+        body: shape.body,
+        after: shape.after ?? "(the program ends)",
+        backLabel: "next item",
+      }),
+    [shape, strip.w, strip.h, longest],
+  );
+
+  // Item states in the iterable.
   const states: Record<number, CellState> = {};
   shape.items.forEach((_, i) => {
     if (!trace) states[i] = produced ? "pending" : "idle";
     else if (at === "exit" || i < index) states[i] = "visited";
-    // A generator's value isn't known until it has produced it (at "assign").
     else if (i === index) states[i] = at === "body" ? "active" : at === "next" && shape.kind === "generator" ? "pending" : "raised";
     else states[i] = produced ? "pending" : "idle";
   });
+  const focus = trace ? Math.min(index, n - 1) : undefined;
 
-  const variable = vars[shape.target];
-  const assigning = at === "assign";
-  const comingBack = at === "next" && index > 0;
-  // A generator is asked for another value before anyone knows whether it has one.
-  // For a generator that's every time: the answer only comes when it yields (or finishes).
-  const asking = at === "next" && (index >= n || shape.kind === "generator");
-  const answeredYes = (at === "next" && !asking) || (assigning && shape.kind === "generator");
+  // What glows.
+  const looks: LoopLooks = { nodes: {}, edges: {} };
+  if (index > 0 || at === "exit") {
+    looks.nodes.target = "done";
+    shape.body.forEach((_, i) => {
+      looks.nodes[`body-${i}`] = "done";
+    });
+  }
+  if (at === "next") {
+    looks.nodes.decision = asking ? "lit" : "true";
+    looks.current = "decision";
+    looks.edges.feed = "lit";
+    if (index > 0) looks.edges.back = "lit";
+  } else if (assigning) {
+    looks.nodes.decision = "true";
+    looks.edges.yes = "lit";
+    looks.nodes.target = "lit";
+    looks.current = "target";
+  } else if (at === "body") {
+    const line = trace?.bodyLine ?? 0;
+    looks.nodes.decision = "true";
+    looks.edges.yes = "done";
+    looks.nodes.target = "done";
+    looks.nodes.frame = "lit";
+    looks.edges[line === 0 ? "into-body" : `body-${line}`] = "lit";
+    shape.body.forEach((_, i) => {
+      if (i < line) looks.nodes[`body-${i}`] = "done";
+    });
+    looks.nodes[`body-${line}`] = "lit";
+    looks.current = `body-${line}`;
+  } else if (at === "exit") {
+    looks.nodes.decision = "false";
+    looks.edges.exit = "lit";
+    looks.edges.yes = "dim";
+    looks.nodes.after = "lit";
+    looks.current = "after";
+  }
+
+  // The picked value travelling: from its cell to the question, then into the loop variable.
+  const header = layout.header!;
+  const win = collectionWindow(n, focus === undefined ? undefined : { lo: focus, hi: focus });
+  const aboveQuestion = { x: layout.decision.x + layout.decision.w / 2, y: layout.decision.y - 26 };
+  let chip: TravellingChip | undefined;
+  if (at === "next" && !asking && current !== undefined) {
+    const c = stripCellCentre(index, win.start, strip.cellW, { label: true });
+    chip = { key: `next-${index}`, text: show(current), from: { x: header.x + c.x, y: header.y + c.y }, to: aboveQuestion };
+  } else if (assigning && current !== undefined && layout.target) {
+    const text = show(current);
+    const slotX = layout.target.x + 16 + (shape.target.length + 3) * CHAR_W + (text.length * CHAR_W + 22) / 2 - 2;
+    const from = shape.kind === "generator" ? { x: aboveQuestion.x, y: layout.decision.y + layout.decision.h / 2 } : aboveQuestion;
+    chip = { key: `assign-${index}`, text, from, to: { x: slotX, y: layout.target.y + 37 } };
+  }
+
+  const targetValue = assigning ? "" : variable ? formatValue(variable) : "?";
+  const label = (
+    <>
+      <tspan className="strip-kw">for</tspan> {shape.target} <tspan className="strip-kw">in</tspan> {shape.iterable}
+    </>
+  );
 
   return (
-    <div className="loop-for flex flex-col gap-2" role="group" aria-label={`for loop over ${shape.iterable}`}>
-      <SegmentedSequence
-        label={
-          <span>
-            <span className="text-syn-kw">for</span> {shape.target} <span className="text-syn-kw">in</span> {shape.iterable}
-          </span>
+    <div className="loop-for" role="group" aria-label={`for loop over ${shape.iterable}`} data-at={at ?? "start"}>
+      <LoopDiagram
+        layout={layout}
+        looks={looks}
+        header={
+          <SequenceStrip
+            id={uid}
+            items={shape.items}
+            strings={strings}
+            states={states}
+            focus={focus === undefined ? undefined : { lo: focus, hi: focus }}
+            label={label}
+            tone={TONE[shape.kind]}
+            showIndexes={shape.kind === "list" || shape.kind === "tuple" || strings}
+          />
         }
-        items={shape.items}
-        strings={shape.kind === "str"}
-        tone={shape.kind === "tuple" ? "tuple" : shape.kind === "str" ? "str" : produced || shape.kind === "set" || shape.kind === "dict" ? "neutral" : "list"}
-        states={states}
-        focus={trace ? { lo: Math.min(index, n - 1), hi: Math.min(index, n - 1) } : undefined}
-        showIndexes={shape.kind === "list" || shape.kind === "tuple" || shape.kind === "str"}
-        caption={KIND_CAPTION[shape.kind]}
-      />
-
-      <DecisionNode
-        on={at === "next" || at === "exit"}
-        caption={asking ? (shape.kind === "generator" ? "asking the generator…" : "asking for one more…") : undefined}
+        question="Next item available?"
+        questionCaption={asking ? (shape.kind === "generator" ? "asking the generator…" : "asking for one more…") : undefined}
         answer={answeredYes ? { text: "Yes", positive: true } : at === "exit" ? { text: "No", positive: false } : undefined}
-      >
-        Next item available?
-      </DecisionNode>
-      <LoopBranch exit={at === "exit"} back={<LoopBack on={comingBack} label="back for the next item" />}>
-        <FlowEdge label="Yes: take it" on={(at === "next" && !asking) || assigning}>
-          {/* The picked value on its way to the loop variable (a copy: the item stays in place). */}
-          {assigning && current !== undefined && (
-            <span key={index} className="for-transfer-chip" aria-hidden>
-              {shape.kind === "str" ? `"${String(current)}"` : pyItem(current)} <span className="font-sans text-[11px]">→ {shape.target}</span>
-            </span>
-          )}
-        </FlowEdge>
-        <div className="viz-node for-target" data-on={assigning || undefined}>
-          <p className="viz-caption">loop variable</p>
-          <p className="font-mono font-bold">
-            {shape.target} = {assigning && current !== undefined ? (shape.kind === "str" ? `"${String(current)}"` : pyItem(current)) : variable ? formatValue(variable) : "?"}
-          </p>
-        </div>
-        <FlowEdge on={at === "body"} />
-        <div className="flex flex-col gap-1.5">
-          {shape.body.map((line, i) => (
-            <OperationNode key={i} code={line} caption={i === 0 ? "body" : undefined} on={at === "body" && (trace?.bodyLine ?? 0) === i} />
-          ))}
-        </div>
-      </LoopBranch>
-
-      <FlowEdge label="No items left: leave the loop" on={at === "exit"} />
-      <div className="viz-node loop-exit" data-on={at === "exit" || undefined}>
-        <p className="viz-caption">after the loop</p>
-        <p className="font-mono text-sm">{shape.after ?? "(the program ends)"}</p>
-      </div>
+        target={{ caption: "loop variable", content: `${shape.target} = ${targetValue}` }}
+        body={shape.body}
+        after={shape.after ?? "(the program ends)"}
+        chip={chip}
+        label={`Flowchart of the for loop over ${shape.iterable}`}
+      />
+      <p className="viz-caption-line">{KIND_CAPTION[shape.kind]}</p>
 
       <p className="sr-only">
         {!trace

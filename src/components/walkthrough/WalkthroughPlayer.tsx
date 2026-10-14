@@ -121,8 +121,7 @@ export function WalkthroughPlayer({
         </div>
 
         <div className="flex min-w-0 flex-col gap-5 [grid-area:viz]">
-          <div className="relative overflow-hidden rounded-3xl border-2 bg-card p-5 shadow-soft">
-            <div className="pointer-events-none absolute inset-0 bg-hero opacity-60" aria-hidden />
+          <div className="relative overflow-hidden rounded-3xl border-2 bg-card p-4 shadow-soft sm:p-5">
             <div className="relative">
               <div className="mb-5 flex flex-wrap items-center gap-2">
                 <h3 className="mr-auto text-xl font-bold">Visualization</h3>
@@ -142,19 +141,22 @@ export function WalkthroughPlayer({
                   ))}
               </div>
 
-              {step.calc ? (
-                <CalculationView calc={step.calc} vars={step.vars} />
-              ) : (
-                step.evaluation && <EvaluationChain stages={step.evaluation} />
-              )}
-              {step.returned !== undefined && !step.call && <ReturnedValue value={step.returned} />}
-              {kind ? (
-                <div className="min-h-32">
-                  <ExampleVisualization example={walkthrough} step={step} previous={previous} kind={kind} />
-                </div>
-              ) : (
-                !step.evaluation && !step.calc && <p className="text-sm text-muted-foreground">Watch the printed output and the highlighted line.</p>
-              )}
+              {/* The diagram's own canvas: dark in both themes, so lines and glows read clearly. */}
+              <div className="viz-stage dark">
+                {step.calc ? (
+                  <CalculationView calc={step.calc} vars={step.vars} />
+                ) : (
+                  step.evaluation && <EvaluationChain stages={step.evaluation} />
+                )}
+                {step.returned !== undefined && !step.call && <ReturnedValue value={step.returned} />}
+                {kind ? (
+                  <div className="min-h-32">
+                    <ExampleVisualization example={walkthrough} step={step} previous={previous} kind={kind} />
+                  </div>
+                ) : (
+                  !step.evaluation && !step.calc && <p className="text-sm text-muted-foreground">Watch the printed output and the highlighted line.</p>
+                )}
+              </div>
 
               <div
                 key={view.index}

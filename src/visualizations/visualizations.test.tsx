@@ -63,28 +63,38 @@ describe("VariablesPanel", () => {
 });
 
 describe("WhileLoopView", () => {
-  const shape = { condition: "count <= 3", body: ["print(count)", "count += 1"] };
+  const shape = { setup: ["count = 1"], condition: "count <= 3", body: ["print(count)", "count += 1"] };
+  const node = (id: string) => document.querySelector(`[data-node="${id}"]`)!.getAttribute("data-look");
+  const edge = (id: string) => document.querySelector(`[data-edge="${id}"]`)!.getAttribute("data-look");
 
   it("shows the whole loop before it runs, with no results", () => {
     render(<WhileLoopView shape={shape} />);
     expect(screen.getByText("print(count)")).toBeTruthy();
     expect(screen.getByText("(the program ends)")).toBeTruthy();
-    expect(document.querySelectorAll("[data-on]")).toHaveLength(0);
-    expect(screen.queryByText(/True$|False$/)).toBeNull();
+    expect(document.querySelectorAll('[data-look="lit"]')).toHaveLength(0);
+    expect(document.querySelector(".flow-answer")).toBeNull();
   });
 
-  it("glows the condition and the True path while checking", () => {
+  it("glows the condition with its real result while checking", () => {
     render(<WhileLoopView shape={shape} trace={{ checks: 2, at: "check", result: true }} />);
     expect(screen.getByText("check 2")).toBeTruthy();
-    expect(screen.getByText(/✓ True/)).toBeTruthy();
-    expect(on(".viz-edge")).toEqual(["↓ True: run the body"]);
+    expect(document.querySelector(".flow-answer")!.textContent).toBe("✓ True");
+    expect(node("decision")).toBe("true");
+    expect(edge("back")).toBe("lit"); // the second check comes round the loop
   });
 
-  it("leaves through the False path, with the body skipped", () => {
+  it("glows only the body line that runs", () => {
+    render(<WhileLoopView shape={shape} trace={{ checks: 1, at: "body", result: true, bodyLine: 1 }} />);
+    expect(node("body-1")).toBe("lit");
+    expect(node("body-0")).toBe("done");
+  });
+
+  it("leaves through the False path; the body is skipped", () => {
     render(<WhileLoopView shape={shape} trace={{ checks: 4, at: "exit", result: false }} />);
-    expect(document.querySelector(".loop-exit")!.hasAttribute("data-on")).toBe(true);
-    expect(document.querySelector(".loop-body")!.hasAttribute("data-skipped")).toBe(true);
-    expect(on(".viz-edge")).toEqual(["↓ False: leave the loop"]);
+    expect(node("after")).toBe("lit");
+    expect(edge("exit")).toBe("lit");
+    expect(edge("yes")).toBe("dim");
+    expect(document.querySelector(".flow-answer")!.textContent).toBe("✗ False");
   });
 });
 
@@ -127,10 +137,10 @@ describe("WalkthroughPlayer keeps code and diagram in sync", () => {
     render(<WalkthroughPlayer walkthrough={plain(getExample("while"))} />);
     next(); // line 3, first check
     expect(screen.getByText(/Running line 3/)).toBeTruthy();
-    expect(document.querySelector(".loop-condition")!.hasAttribute("data-on")).toBe(true);
+    expect(document.querySelector('[data-node="decision"]')!.getAttribute("data-look")).toBe("true");
     next(); // line 4, the body
     expect(screen.getByText(/Running line 4/)).toBeTruthy();
-    expect(document.querySelector(".loop-body")!.hasAttribute("data-on")).toBe(true);
+    expect(document.querySelector('[data-node="body-0"]')!.getAttribute("data-look")).toBe("lit");
     expect(activeLine()).toBe("4");
   });
 
