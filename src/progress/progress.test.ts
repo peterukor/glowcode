@@ -22,6 +22,25 @@ const lesson = (id: string, status: Lesson["status"] = "published"): Lesson => (
   sections: [],
 });
 
+/** A lesson containing one walkthrough, so "resume at this walkthrough" has something to land on. */
+const withWalkthrough = (l: Lesson, walkthroughId: string): Lesson => ({
+  ...l,
+  sections: [
+    {
+      id: "s",
+      title: "S",
+      blocks: [
+        {
+          type: "code",
+          language: "python",
+          code: "print(1)",
+          walkthrough: { id: walkthroughId, title: "W", language: "python", visualizations: [], code: "print(1)", steps: [{ line: 1, vars: {}, output: ["1"], note: "Prints 1." }] },
+        },
+      ],
+    },
+  ],
+});
+
 const course = (lessons: Lesson[], id = "py"): Course => ({
   id,
   title: id,
@@ -97,7 +116,7 @@ describe("progress rules", () => {
   });
 
   it("resumes at the last activity of the last visited lesson", () => {
-    const c = course([lesson("a"), lesson("b")]);
+    const c = course([lesson("a"), withWalkthrough(lesson("b"), "py-birthday")]);
     let s = visitLesson(emptyProgress(), "py", "b", now);
     s = recordActivity(s, "py", "b", "walkthrough-py-birthday", later);
     expect(resumeTarget(c, s.courses["py"])).toEqual({ lessonId: "b", hash: "activity-walkthrough-py-birthday" });
@@ -109,6 +128,12 @@ describe("progress rules", () => {
     s = visitLesson(s, "py", "b", later);
     expect(resumeTarget(c, s.courses["py"])).toEqual({ lessonId: "b", hash: undefined });
     expect(resumeTarget(c, undefined)).toEqual({ lessonId: "a", hash: undefined });
+  });
+
+  it("ignores a saved activity that's no longer in the lesson", () => {
+    const c = course([lesson("a"), lesson("b")]);
+    const s = recordActivity(emptyProgress(), "py", "b", "walkthrough-py-birthday", now);
+    expect(resumeTarget(c, s.courses["py"])).toEqual({ lessonId: "b", hash: undefined });
   });
 });
 

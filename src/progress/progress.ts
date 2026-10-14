@@ -5,7 +5,7 @@
  * Everything is keyed by stable course and lesson ids, so adding, reordering or
  * unpublishing lessons never erases what a student has done.
  */
-import { findPublishedLesson, publishedLessons, type LessonEntry } from "@/courses/queries";
+import { findPublishedLesson, publishedLessons, resumableIdsIn, type LessonEntry } from "@/courses/queries";
 import type { Course } from "@/courses/types";
 
 export type CourseProgress = {
@@ -118,6 +118,10 @@ export function summarizeCourse(course: Course, cp: CourseProgress | undefined):
 export function resumeTarget(course: Course, cp: CourseProgress | undefined) {
   const { resumeLessonId } = summarizeCourse(course, cp);
   if (!resumeLessonId) return undefined;
-  const activity = cp?.lastActivity?.lessonId === resumeLessonId ? cp.lastActivity.activityId : undefined;
+  const saved = cp?.lastActivity?.lessonId === resumeLessonId ? cp.lastActivity.activityId : undefined;
+  // Content moves between lessons (Phase 6 moved several activities). A saved activity that
+  // isn't in the lesson any more is ignored, so the student lands at the top instead of nowhere.
+  const lesson = findPublishedLesson(course, resumeLessonId)?.lesson;
+  const activity = saved && lesson && resumableIdsIn(lesson).has(saved) ? saved : undefined;
   return { lessonId: resumeLessonId, hash: activity ? `activity-${activity}` : undefined };
 }
