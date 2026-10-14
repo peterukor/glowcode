@@ -2,7 +2,7 @@ import { CircleCheck, CircleX, Eye, RotateCcw } from "lucide-react";
 import { useId, useState, type Ref } from "react";
 import { RichTextView } from "@/components/lesson/RichTextView";
 import type { Checkpoint } from "@/types/trace";
-import type { CheckpointRecord } from "./checkpointRecord";
+import type { CheckpointRecord } from "@/walkthrough/controller";
 
 const DEFAULT_WRONG = "Not quite. Look at the highlighted line and the values Python has right now, then try again.";
 

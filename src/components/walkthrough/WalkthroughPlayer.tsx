@@ -8,21 +8,18 @@ import { CalculationView } from "@/visualizations/CalculationView";
 import { ExampleVisualization } from "@/visualizations/ExampleVisualization";
 import { visualizationLabels } from "@/visualizations/labels";
 import { TypeLegend, VariablesPanel } from "@/visualizations/VariableBox";
-import { emptyRecord, type CheckpointRecord } from "./checkpointRecord";
+import { readingNames } from "@/walkthrough/controller";
 import { CheckpointQuestion, CheckpointRecap } from "./WalkthroughCheckpoint";
 
 /**
- * The step-by-step player used by both the playground and lessons:
- * controls on top, code + console on the left, visualization + explanation on the right.
+ * The one read-only step-by-step player, used by lessons, the playground, the manual and the
+ * developer showcase: controls on top, code and printed output on the left, the diagram and
+ * explanation on the right.
  *
- * It sizes itself to its container, not the window: side by side when there's room,
- * stacked when it sits in a narrower column (like a lesson with both panels open).
- * Read-only: it replays predefined, verified steps and never runs code.
- *
- * Predictions: a step can carry a `checkpoint`. The player then stops on the step before
- * it and asks; Next stays disabled until the student reveals the step (after answering, or
- * by choosing to skip). Answers are remembered while the player is open, so stepping back
- * and forth never asks again; Reset starts everything over.
+ * It only renders. Which event is on screen, and what the student did at predictions, comes
+ * from the playback controller (`src/walkthrough/controller.ts` via `usePlayback`); what
+ * each diagram shows comes from the event's data. It sizes itself to its container: side by
+ * side when there's room, stacked in a narrow column. It never edits or runs code.
  */
 export function WalkthroughPlayer({
   walkthrough,
@@ -36,45 +33,27 @@ export function WalkthroughPlayer({
   /** Optional content above the controls (the playground's example picker). */
   header?: ReactNode;
 }) {
-  const steps = walkthrough.steps;
-  const [records, setRecords] = useState<Record<number, CheckpointRecord>>({});
-  const waitingAt = (from: number) => !!steps[from + 1]?.checkpoint && !records[from + 1]?.revealed;
-  const playback = usePlayback(steps.length, walkthrough.id, waitingAt);
+  const playback = usePlayback(walkthrough);
+  const { view, dispatch } = playback;
+  const { step, previous, waiting } = view;
   const [chosenKind, setChosenKind] = useState<VisualizationKind | undefined>(walkthrough.visualizations[0]);
   const [consoleOpen, setConsoleOpen] = useState(true);
   const questionRef = useRef<HTMLHeadingElement>(null);
   const noteRef = useRef<HTMLDivElement>(null);
   const [focusNote, setFocusNote] = useState(false);
 
-  // A different program starts with fresh predictions.
-  useEffect(() => setRecords({}), [walkthrough.id]);
   useEffect(() => {
     if (!focusNote) return;
     noteRef.current?.focus();
     setFocusNote(false);
   }, [focusNote]);
 
-  const update = (index: number, change: (r: CheckpointRecord) => CheckpointRecord) =>
-    setRecords((all) => ({ ...all, [index]: change(all[index] ?? emptyRecord) }));
-
-  const stepIndex = Math.min(playback.step, steps.length - 1);
-  const step = steps[stepIndex]!;
-  const pendingIndex = playback.blocked ? stepIndex + 1 : undefined;
-  const pending = pendingIndex !== undefined ? steps[pendingIndex]!.checkpoint : undefined;
-  const recap = step.checkpoint && records[stepIndex]?.revealed ? step.checkpoint : undefined;
-
   const reveal = () => {
-    if (pendingIndex === undefined) return;
-    update(pendingIndex, (r) => ({ ...r, revealed: true }));
-    playback.advance();
+    dispatch({ type: "reveal" });
     setFocusNote(true);
   };
-  const resetAll = () => {
-    setRecords({});
-    playback.reset();
-  };
-  const position = linePosition(walkthrough, stepIndex);
   const kind = chosenKind && walkthrough.visualizations.includes(chosenKind) ? chosenKind : walkthrough.visualizations[0];
+  const reading = readingNames(step);
 
   return (
     <div
@@ -83,7 +62,7 @@ export function WalkthroughPlayer({
         // ← / → step through, unless the student is typing or choosing an option.
         if (e.target instanceof HTMLElement && e.target.closest("input, textarea, [role='tab']")) return;
         if (e.key === "ArrowRight") {
-          if (playback.blocked) questionRef.current?.focus();
+          if (waiting) questionRef.current?.focus();
           else playback.next();
         }
         if (e.key === "ArrowLeft") playback.prev();
@@ -92,7 +71,7 @@ export function WalkthroughPlayer({
       {header}
 
       <div className="mb-5 rounded-3xl border-2 bg-card p-3 shadow-soft">
-        <PlaybackControls playback={{ ...playback, reset: resetAll }} playLabel={playLabel} />
+        <PlaybackControls playback={playback} playLabel={playLabel} />
       </div>
 
       {/* Wide: code and console on the left, visualization on the right.
@@ -109,7 +88,7 @@ export function WalkthroughPlayer({
             <CodeView code={walkthrough.code} activeLine={step.line} label="Code being walked through" className="min-h-40 rounded-none" />
             <p className="border-t border-code-line/30 px-4 py-2 font-mono text-xs text-code-line" aria-live="polite">
               Running line {step.line}
-              {position && <span className="text-sun"> · {position}</span>}
+              {view.linePosition && <span className="text-sun"> · {view.linePosition}</span>}
             </p>
           </div>
         </div>
@@ -171,14 +150,14 @@ export function WalkthroughPlayer({
               {step.returned !== undefined && !step.call && <ReturnedValue value={step.returned} />}
               {kind ? (
                 <div className="min-h-32">
-                  <ExampleVisualization example={walkthrough} step={step} kind={kind} />
+                  <ExampleVisualization example={walkthrough} step={step} previous={previous} kind={kind} />
                 </div>
               ) : (
                 !step.evaluation && !step.calc && <p className="text-sm text-muted-foreground">Watch the printed output and the highlighted line.</p>
               )}
 
               <div
-                key={playback.step}
+                key={view.index}
                 ref={noteRef}
                 tabIndex={-1}
                 className="animate-pop mt-6 flex items-start gap-3 rounded-2xl border-2 border-primary/30 bg-card/80 p-4 outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -187,24 +166,18 @@ export function WalkthroughPlayer({
                   💡
                 </span>
                 <p className="font-medium" aria-live="polite">
-                  {step.note}
+                  {step.note ?? `Line ${step.line} runs.`}
                 </p>
               </div>
 
-              {recap && <CheckpointRecap checkpoint={recap} record={records[stepIndex]!} />}
-              {pending && pendingIndex !== undefined && (
+              {view.recap && step.checkpoint && <CheckpointRecap checkpoint={step.checkpoint} record={view.recap} />}
+              {waiting && (
                 <CheckpointQuestion
-                  key={pendingIndex}
+                  key={waiting.index}
                   ref={questionRef}
-                  checkpoint={pending}
-                  record={records[pendingIndex] ?? emptyRecord}
-                  onCheck={(choiceId) =>
-                    update(pendingIndex, (r) =>
-                      choiceId === pending.answer
-                        ? { ...r, correct: true }
-                        : { ...r, ruledOut: r.ruledOut.includes(choiceId) ? r.ruledOut : [...r.ruledOut, choiceId] },
-                    )
-                  }
+                  checkpoint={waiting.step.checkpoint!}
+                  record={waiting.record}
+                  onCheck={(choiceId) => dispatch({ type: "check", choiceId })}
                   onReveal={reveal}
                 />
               )}
@@ -217,7 +190,7 @@ export function WalkthroughPlayer({
                 <h3 className="font-bold">Variables</h3>
                 <TypeLegend />
               </div>
-              <VariablesPanel vars={step.vars} highlight={step.highlight} />
+              <VariablesPanel vars={step.vars} highlight={step.highlight} previous={previous?.vars} reading={reading} />
             </div>
           )}
         </div>
@@ -247,23 +220,6 @@ function EvaluationChain({ stages }: { stages: string[] }) {
       ))}
     </div>
   );
-}
-
-/**
- * Explains why the highlight didn't simply move down one line: the same line can run
- * again (loops) or take several steps (work out the right side, then assign).
- */
-function linePosition(walkthrough: Walkthrough, index: number): string | undefined {
-  const steps = walkthrough.steps;
-  const line = steps[index]!.line;
-  if (index > 0 && steps[index - 1]!.line === line) return "same line, next step";
-  const visits = steps.slice(0, index + 1).filter((s, i) => s.line === line && (i === 0 || steps[i - 1]!.line !== line)).length;
-  if (visits > 1) return visits === 2 ? "running again" : `running again (${visits}${ordinal(visits)} time)`;
-  return undefined;
-}
-
-function ordinal(n: number) {
-  return n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd" : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th";
 }
 
 /** A value handed back by a function. Styled and labeled unlike printed output on purpose. */

@@ -1,57 +1,60 @@
 import { useEffect, useState } from "react";
-
-export type Playback = ReturnType<typeof usePlayback>;
+import type { Walkthrough } from "@/types/trace";
+import { initialPlayback, reducePlayback, viewPlayback, type PlaybackAction, type PlaybackState } from "@/walkthrough/controller";
 
 const BASE_DELAY_MS = 1200;
 
+export type Playback = ReturnType<typeof usePlayback>;
+
 /**
- * Steps through a trace: previous / next / reset, plus optional autoplay and speed.
- * `traceId` resets playback whenever a different program is loaded.
- * `isBlocked(step)` says the student can't move past `step` yet (a prediction is waiting):
- * Next and autoplay stop there, and only `advance()` (an explicit reveal) moves on.
+ * React glue for the playback controller (`src/walkthrough/controller.ts`), plus optional
+ * autoplay. Manual stepping is the default; autoplay stops at the end and at predictions.
+ * Loading a different walkthrough starts over.
  */
-export function usePlayback(total: number, traceId: string, isBlocked: (step: number) => boolean = () => false) {
-  const [step, setStep] = useState(0);
+export function usePlayback(walkthrough: Walkthrough) {
+  const [state, setState] = useState<PlaybackState>(initialPlayback);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const blocked = isBlocked(step);
-
-  useEffect(() => {
-    setStep(0);
+  const [loaded, setLoaded] = useState(walkthrough.id);
+  if (loaded !== walkthrough.id) {
+    setLoaded(walkthrough.id);
+    setState(initialPlayback);
     setPlaying(false);
-  }, [traceId, total]);
+  }
+
+  const view = viewPlayback(walkthrough, state);
+  const dispatch = (action: PlaybackAction) => setState((s) => reducePlayback(walkthrough, s, action));
 
   useEffect(() => {
     if (!playing) return;
-    if (step >= total - 1 || blocked) {
+    if (!view.canNext) {
       setPlaying(false);
       return;
     }
-    const timer = setTimeout(() => setStep((s) => Math.min(total - 1, s + 1)), BASE_DELAY_MS / speed);
+    const timer = setTimeout(() => setState((s) => reducePlayback(walkthrough, s, { type: "next" })), BASE_DELAY_MS / speed);
     return () => clearTimeout(timer);
-  }, [playing, step, total, speed, blocked]);
+  }, [playing, view.canNext, view.index, speed, walkthrough]);
 
   return {
-    step,
-    total,
+    view,
+    dispatch,
+    // The shape PlaybackControls uses.
+    step: view.index,
+    total: view.total,
+    blocked: view.waiting !== undefined,
     playing,
     speed,
-    blocked,
     setSpeed,
-    next: () => {
-      if (!blocked) setStep((s) => Math.min(total - 1, s + 1));
-    },
-    /** Moves on even past a waiting prediction: the student chose to reveal. */
-    advance: () => setStep((s) => Math.min(total - 1, s + 1)),
-    prev: () => setStep((s) => Math.max(0, s - 1)),
+    next: () => dispatch({ type: "next" }),
+    prev: () => dispatch({ type: "prev" }),
     reset: () => {
-      setStep(0);
       setPlaying(false);
+      dispatch({ type: "reset" });
     },
     toggle: () => {
       if (playing) return setPlaying(false);
-      if (step >= total - 1) setStep(0);
-      else if (blocked) return;
+      if (view.index >= view.total - 1) dispatch({ type: "rewind" });
+      else if (view.waiting) return;
       setPlaying(true);
     },
   };

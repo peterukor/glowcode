@@ -48,7 +48,9 @@ const walkthrough: Walkthrough = {
   ],
 };
 
-const varValues = () => [...document.querySelectorAll(".var-box")].map((el) => el.textContent);
+/** Every binding on screen as "name=value", e.g. "count=3". */
+const varValues = () =>
+  [...document.querySelectorAll(".binding")].map((el) => `${el.querySelector(".binding-name")!.textContent}=${el.querySelector(".binding-value span")!.textContent}`);
 
 describe("predictions inside a walkthrough", () => {
   it("pauses before the step and doesn't show what happens next", () => {
@@ -60,7 +62,7 @@ describe("predictions inside a walkthrough", () => {
     // Nothing from the next step leaks: no calculation, no new value, no next note.
     expect(screen.queryByText("N2: work out 3 + 2.")).toBeNull();
     expect(screen.queryByRole("group", { name: /Assignment/ })).toBeNull();
-    expect(varValues()).toEqual(["countint3"]);
+    expect(varValues()).toEqual(["count=3"]);
   });
 
   it("gives feedback on a wrong prediction and keeps the step hidden", () => {
@@ -136,17 +138,17 @@ describe("execution events", () => {
   it("shows calculation and assignment as two events on the same line", () => {
     render(<WalkthroughPlayer walkthrough={{ ...walkthrough, steps: walkthrough.steps.map((s) => ({ ...s, checkpoint: undefined })) }} />);
     fireEvent.click(next());
-    expect(screen.getByText("First: work out the right side")).toBeTruthy();
+    expect(screen.getByText("Work out the right side")).toBeTruthy();
     expect(screen.getByText("result, not stored yet")).toBeTruthy();
     // The literal 2 is an operand like count; only + is drawn as the operator.
     expect([...document.querySelectorAll(".calc-op")].map((el) => el.textContent)).toEqual(["+"]);
     expect([...document.querySelectorAll(".calc-operand")].map((el) => el.textContent)).toEqual(["count3", "2"]);
-    expect(varValues()).toEqual(["countint3"]); // the old value, until the assignment
+    expect(varValues()).toEqual(["count=3"]); // the old value, until the assignment
 
     fireEvent.click(next());
-    expect(screen.getByText("Then: store the result")).toBeTruthy();
+    expect(screen.getByText("Store the result")).toBeTruthy();
     expect(screen.getByText(/same line, next step/)).toBeTruthy();
-    expect(varValues()).toEqual(["countint5"]);
+    expect(varValues()).toEqual(["count=5"]);
   });
 
   it("marks lines that run again inside a loop", () => {
