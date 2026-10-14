@@ -41,9 +41,10 @@ describe("registry content", () => {
     }
   });
 
-  it("starts Python with the two sample lessons in order", () => {
+  it("starts Python with Chapter 1's lessons, in order", () => {
     const ids = publishedLessons(getCourse("python-fundamentals")!).map((e) => e.lesson.id);
-    expect(ids).toEqual(["what-is-programming", "why-variables-exist"]);
+    expect(ids.slice(0, 2)).toEqual(["what-is-programming", "how-computers-follow-instructions"]);
+    expect(ids.at(-1)).toBe("why-variables-exist");
   });
 });
 

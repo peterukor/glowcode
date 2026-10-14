@@ -1,51 +1,21 @@
 import type { Lesson } from "@/courses/types";
-import type { Walkthrough } from "@/types/trace";
 
-const helloWalkthrough: Walkthrough = {
-  id: "py-hello-program",
-  title: "Your first program",
-  language: "python",
-  // No variables or decisions here: the diagram shows each print() call and what it prints.
-  visualizations: ["function"],
-  code: `print("Hello!")
-print("I am a Python program.")`,
-  steps: [
-    {
-      line: 1,
-      vars: {},
-      output: ["Hello!"],
-      call: { name: "print", args: ['"Hello!"'], prints: ["Hello!"], phase: "result" },
-      note: "Python starts at the top. Line 1 gives the string \"Hello!\" to print(), which shows Hello! on the screen.",
-    },
-    {
-      line: 2,
-      vars: {},
-      output: ["Hello!", "I am a Python program."],
-      call: { name: "print", args: ['"I am a Python program."'], prints: ["I am a Python program."], phase: "result" },
-      note: "Line 1 is finished, so Python moves to line 2 and prints the second message under the first.",
-    },
-  ],
-};
-
+/**
+ * Chapter 1, lesson 1. No Python syntax yet: what a program is, who writes it, and why
+ * programming languages exist. The first look at real code (and at `print()`) is lesson 3.
+ */
 export const whatIsProgramming: Lesson = {
   id: "what-is-programming",
   title: "What Is Programming?",
-  description: "What a program is, why people write them, and how Python follows your instructions.",
+  description: "What programs, programmers and programming languages are, and why computers need exact instructions.",
   status: "published",
   objectives: [
-    "Explain what a program is in your own words.",
-    "Describe how Python runs code: one line at a time, from top to bottom.",
-    "Read a short program and predict exactly what it prints.",
-    "Use an error message to find a simple mistake.",
+    "Explain what a program is and what a programmer does.",
+    "Explain why computers need instructions that leave nothing to guess.",
+    "Describe why programming languages exist instead of plain English.",
+    "Tell the difference between code and what the code makes the computer do.",
   ],
-  references: [
-    "concept.program",
-    "concept.programming-language",
-    "concept.interpreter",
-    "python.builtins.print",
-    "python.types.str",
-    "python.errors.NameError",
-  ],
+  references: ["concept.program", "concept.programming-language", "concept.python", "concept.interpreter"],
   sections: [
     {
       id: "why",
@@ -57,11 +27,11 @@ export const whatIsProgramming: Lesson = {
         },
         {
           type: "text",
-          text: "Jobs like this are perfect for a computer. Once someone has written down the exact steps, a computer can follow them for 30 papers or 30,000, in a fraction of a second, and it never loses concentration halfway through.",
+          text: "Jobs like this are perfect for a computer. A computer can do millions of small steps every second, and it never gets bored or loses its place. But it can't decide **what** to do. Someone has to write the exact steps first: add up the points, divide by the total, compare the result with the grade boundaries.",
         },
         {
           type: "text",
-          text: "Writing those steps down is **programming**. Every app on your phone, every game and every website started as someone writing steps like these.",
+          text: "Writing those steps is **programming**, and the person who writes them is a **programmer**. Every app on your phone, every game and every website started as a programmer writing steps like these.",
         },
       ],
     },
@@ -71,172 +41,103 @@ export const whatIsProgramming: Lesson = {
       blocks: [
         {
           type: "text",
-          text: "A [program](ref:concept.program) is a list of instructions for a computer. The computer carries them out in the order they're written, exactly as written. It can't guess what you meant, and it won't skip a step that looks silly.",
+          text: "A [program](ref:concept.program) is a list of **instructions** for a computer. Each instruction is one small, exact step. The computer carries them out in order, exactly as they're written.",
         },
         {
           type: "callout",
           tone: "real-world",
-          title: "Like a recipe",
-          text: "A recipe lists steps in order: crack the eggs, whisk them, then cook them. A computer is a cook who never improvises. If the recipe says to cook the eggs before cracking them, it tries exactly that.",
+          title: "Like a recipe, with a very literal cook",
+          text: "A recipe lists steps in order: crack the eggs, whisk them, then cook them. A person reading it fills in what's missing and fixes obvious slips. A computer is a cook who never does that. If the recipe says to cook the eggs before cracking them, it tries exactly that.",
         },
         {
           type: "text",
-          text: "You'll write your instructions in Python, a [programming language](ref:concept.programming-language) designed to be readable by people and precise enough for a computer. Another program, the Python [interpreter](ref:concept.interpreter), reads your code and carries it out:",
+          text: "That last point matters more than it sounds. A computer has no idea what you're **trying** to do. It only has the instructions. When a program does something strange, the reason is almost always in the instructions themselves.",
+        },
+        {
+          type: "text",
+          text: "Try being that literal yourself. A robot follows instructions exactly, in the order given, and it's handed these three:",
+        },
+        { type: "list", ordered: true, items: ["Pour water from the jug.", "Pick up a glass.", "Hold the glass under the jug."] },
+        {
+          type: "question",
+          id: "predict-robot-water",
+          variant: "predict",
+          prompt: "The robot carries out the three steps above, in that order. What happens?",
+          choices: [
+            {
+              id: "glass",
+              text: "It fills a glass with water",
+              feedback:
+                "That's what a person would do, because a person knows what the steps are **for**. The robot only knows the steps. What is it holding when it carries out step 1?",
+            },
+            { id: "spill", text: "It pours water onto the table, then picks up an empty glass" },
+            {
+              id: "reorder",
+              text: "It notices the mistake and swaps steps 1 and 3",
+              feedback: "Noticing a mistake means knowing what the steps are meant to achieve. A computer follows the order it's given. Try running the steps one at a time.",
+            },
+          ],
+          answer: "spill",
+          hint: "Do step 1 yourself, with nothing in your hand.",
+          explanation:
+            "Step 1 says pour, so the robot pours, before there's any glass to catch the water. Steps 2 and 3 happen afterwards, too late. The instructions were all reasonable; their **order** was wrong, and the robot can't tell.",
+        },
+      ],
+    },
+    {
+      id: "why-languages",
+      title: "Why not just write in English?",
+      blocks: [
+        {
+          type: "text",
+          text: "Deep down, a computer's processor only understands very simple instructions written as numbers. People can't sensibly write a game in numbers. But everyday English has the opposite problem: it's full of guesswork. \"Make the text bigger\" doesn't say how much bigger, or which text.",
+        },
+        {
+          type: "text",
+          text: "A [programming language](ref:concept.programming-language) sits in between. It's written with words and symbols people can read, and it has strict rules, so every instruction means exactly one thing. Those rules are called **syntax**.",
+        },
+        {
+          type: "text",
+          text: "You'll learn [Python](ref:concept.python), a programming language known for being readable. Instructions written in a programming language are called **code**. To run Python code, a program called the [Python interpreter](ref:concept.interpreter) reads it and carries it out:",
         },
         {
           type: "figure",
-          caption: "Python works through your program one instruction at a time and finishes each one before starting the next.",
+          caption: "From code to behavior. The computer doesn't act on your intentions, only on the code you wrote.",
           figure: {
             kind: "sequence",
             steps: [
-              "You write instructions in a `.py` file",
-              "Python reads the **first** line and carries it out",
-              "Python moves to the next line",
-              "When the last line is done, the program ends",
+              "A programmer writes **code** in Python",
+              "The Python interpreter reads the code",
+              "The computer carries out each instruction",
+              "You see the result, such as text on the screen",
             ],
           },
         },
-      ],
-    },
-    {
-      id: "first-program",
-      title: "Your first Python program",
-      blocks: [
         {
           type: "text",
-          text: "Here is a complete Python program. It has two instructions, one per line.",
-        },
-        {
-          type: "code",
-          language: "python",
-          code: helloWalkthrough.code,
-          output: ["Hello!", "I am a Python program."],
-          caption: "Two instructions, two lines of printed output, in the same order.",
-          walkthrough: helloWalkthrough,
-        },
-        {
-          type: "text",
-          text: "[`print()`](ref:python.builtins.print) is a **function** that comes built into Python. A function is a named job you can ask Python to do. You ask by writing its name followed by parentheses, and whatever you put inside the parentheses is what `print()` shows on the screen.",
-        },
-        {
-          type: "text",
-          text: "The text inside the quotes is called a [string](ref:python.types.str). The quotes tell Python where the text starts and ends. They aren't part of the text, so they don't appear in the output.",
-        },
-        {
-          type: "callout",
-          tone: "execution",
-          text: "When Python reaches line 1, it finds the string `\"Hello!\"`, hands it to `print()`, and `print()` writes `Hello!` on the screen. Only then does Python look at line 2.",
-        },
-      ],
-    },
-    {
-      id: "order-matters",
-      title: "Order matters",
-      blocks: [
-        {
-          type: "text",
-          text: "Because Python always runs from the top, the order of your lines is the order things happen. Try predicting before you check.",
-        },
-        {
-          type: "question",
-          id: "predict-socks",
-          variant: "predict",
-          prompt: "What does this program print **first**?",
-          code: `print("Put on your shoes")
-print("Put on your socks")`,
-          choices: [
-            {
-              id: "socks",
-              text: "`Put on your socks`",
-              feedback:
-                "That's the sensible order for a person, but Python doesn't know anything about shoes or socks. Which line does it run first?",
-            },
-            { id: "shoes", text: "`Put on your shoes`" },
-            {
-              id: "both",
-              text: "Both lines at the same moment",
-              feedback: "Python finishes one instruction before it starts the next, so the two lines can't happen together.",
-            },
-          ],
-          answer: "shoes",
-          hint: "Ignore what the words mean. Which line is at the top?",
-          explanation:
-            "Python runs line 1, then line 2, so the shoes line comes first. The program is wrong for real life, and Python can't tell. It does what the code says, which means getting the order right is your job.",
+          text: "So there are two different things to keep apart: the **code** (the instructions you write) and what happens when it **runs** (what the computer does with them). You'll see both side by side in every lesson from here on.",
         },
         {
           type: "reflect",
           id: "reflect-exact-instructions",
-          prompt: "A friend would understand \"put on your shoes and socks\" and do it in the right order. Why can't Python do the same?",
+          prompt: "A friend would understand \"put on your shoes and socks\" and do it in the right order. Why can't a computer do the same?",
           answer:
-            "Your friend knows how feet, socks and shoes work, and fills in the missing details without noticing. Python knows nothing about the world. It only knows the instructions it was given, in the order it was given them. That's why programmers write steps that are complete and in the right order, with nothing left for the computer to guess.",
+            "Your friend knows how feet, socks and shoes work, and fills in the missing details without noticing. A computer knows nothing about the world. It only has the instructions it was given, in the order it was given them. That's why programmers write steps that are complete and in the right order, with nothing left for the computer to guess.",
         },
       ],
     },
     {
-      id: "think-like-a-programmer",
-      title: "When something goes wrong",
+      id: "key-ideas",
+      title: "Key ideas",
       blocks: [
         {
-          type: "callout",
-          tone: "mindset",
-          title: "Be the computer",
-          text: "Write instructions for making a glass of water for a robot that knows nothing. \"Get water\" is too vague: from where, and in what? You'll end up writing steps like \"pick up a glass\" and \"turn on the tap\". Being that exact is most of programming.",
-        },
-        {
-          type: "text",
-          text: "Because Python needs everything exact, small slips stop a program. When that happens, Python prints an **error message** that names the problem. Programmers read the **last line** of the message first, because that's where the problem is described.",
-        },
-        {
-          type: "question",
-          id: "debug-capital-print",
-          variant: "debug",
-          prompt: "This program stopped with an error instead of printing. What's wrong with the code?",
-          code: `Print("Hello!")`,
-          errorOutput: `Traceback (most recent call last):
-  File "main.py", line 1, in <module>
-    Print("Hello!")
-    ^^^^^
-NameError: name 'Print' is not defined. Did you mean: 'print'?`,
-          choices: [
-            { id: "case", text: "`Print` should be lowercase: `print`" },
-            {
-              id: "quotes",
-              text: "The text needs single quotes instead of double quotes",
-              feedback:
-                "Python accepts single or double quotes around text, so the quotes are fine. Look at the last line of the error: which word does it complain about?",
-            },
-            {
-              id: "semicolon",
-              text: "The line needs a semicolon at the end",
-              feedback:
-                "Python doesn't use semicolons to end lines. The error message points to a specific name. Which one?",
-            },
+          type: "list",
+          items: [
+            "A **program** is a list of exact instructions. A **programmer** writes them.",
+            "A computer carries out instructions in order and never guesses what you meant.",
+            "A **programming language** like Python is precise enough for a computer and readable for people. Its rules are its **syntax**.",
+            "**Code** is the instructions; running it is what makes the computer act. Next, you'll see how Python works through code one step at a time.",
           ],
-          answer: "case",
-          explanation:
-            "Python is **case-sensitive**, so `print` and `Print` are two different names. Python has a built-in called `print` and nothing called `Print`, so it stops with a [NameError](ref:python.errors.NameError). The last line of the message named the exact word, and even suggested the fix.",
-        },
-      ],
-    },
-    {
-      id: "practice",
-      title: "Practice",
-      blocks: [
-        {
-          type: "practice",
-          id: "practice-morning-routine",
-          context: "A robot helper needs a program that announces its morning routine, one step per line.",
-          prompt: "Write a program that prints these three steps, in this order: `Wake up`, `Brush teeth`, `Eat breakfast`.",
-          checklist: ["Use one `print()` per step.", "Put each step's text inside quotes.", "Print the steps in the order given."],
-          hints: [
-            "Your first program printed two lines with two `print()` instructions. This one needs three.",
-            "The first line of your program is `print(\"Wake up\")`.",
-          ],
-          solution: `print("Wake up")
-print("Brush teeth")
-print("Eat breakfast")`,
-          solutionNote:
-            "Python runs the three lines from the top, so the steps appear in the same order you wrote them. Swap two lines and the printed order swaps too.",
         },
       ],
     },

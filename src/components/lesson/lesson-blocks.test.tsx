@@ -179,6 +179,39 @@ const practice: PracticeBlock = {
   alternatives: [{ note: "You could write 2 directly." }],
 };
 
+describe("Chapter 1 activities", () => {
+  const chapterOne = getCourse("python-fundamentals")!.chapters[0]!;
+  const chapterQuestions = chapterOne.lessons.flatMap((l) => l.sections.flatMap((s) => s.blocks)).filter((b): b is QuestionBlock => b.type === "question");
+
+  it("never shows an answer before an attempt, and keeps it hidden after a wrong one", () => {
+    expect(chapterQuestions.length).toBeGreaterThanOrEqual(15);
+    for (const q of chapterQuestions) {
+      const { unmount } = render(<QuestionActivity block={q} onAttempt={() => {}} />);
+      expect(button("Check answer").disabled).toBe(true);
+      noButton("Show the answer");
+      expect(screen.queryByText("Yes, that's it!")).toBeNull();
+
+      const wrong = q.choices.findIndex((c) => c.id !== q.answer);
+      fireEvent.click(screen.getAllByRole("radio")[wrong]!);
+      fireEvent.click(button("Check answer"));
+      expect(screen.queryByText("Yes, that's it!"), q.id).toBeNull();
+      expect(screen.queryByText("Here's the answer."), q.id).toBeNull();
+      button("Show the answer"); // offered only now, after a real try
+      unmount();
+    }
+  });
+
+  it("confirms the right answer for every question", () => {
+    for (const q of chapterQuestions) {
+      const { unmount } = render(<QuestionActivity block={q} onAttempt={() => {}} />);
+      fireEvent.click(screen.getAllByRole("radio")[q.choices.findIndex((c) => c.id === q.answer)]!);
+      fireEvent.click(button("Check answer"));
+      expect(screen.getByText("Yes, that's it!"), q.id).toBeTruthy();
+      unmount();
+    }
+  });
+});
+
 describe("PracticeActivity", () => {
   it("never claims to check the student's code", () => {
     render(<PracticeActivity block={practice} onAttempt={() => {}} />);
