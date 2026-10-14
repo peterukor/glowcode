@@ -3,7 +3,7 @@
 
 import type { Example } from "@/types/trace";
 import type { PyValue } from "@/types/python";
-import { buildSteps, py } from "@/walkthrough/build";
+import { buildSteps, py, type StepInput } from "@/walkthrough/build";
 
 const int = (value: number): PyValue => ({ type: "int", value });
 const float = (value: number): PyValue => ({ type: "float", value });
@@ -232,47 +232,49 @@ const loopCalc = (old: number, n: number, phase: "calculate" | "assign") => ({
   phase,
 });
 
+/** One lap of the for loop: take the next item, assign it to n, then total = total + n in two events. */
+const forLap = (index: number, n: number, old: number, ask: string): StepInput[] => [
+  { line: 2, forLoop: { at: "next" as const, index }, note: ask },
+  { line: 2, set: { n: py.int(n) }, forLoop: { at: "assign" as const, index }, note: `n now refers to ${n}.` },
+  { line: 3, forLoop: { at: "body" as const, index, bodyLine: 0 }, calc: loopCalc(old, n, "calculate"), note: `Work out total + n: ${old} + ${n} is ${old + n}.` },
+  { line: 3, set: { total: py.int(old + n) }, forLoop: { at: "body" as const, index, bodyLine: 0 }, calc: loopCalc(old, n, "assign"), note: `total now refers to ${old + n}.` },
+];
+
 const forLoop: Example = {
   id: "loop",
   title: "For Loop",
   emoji: "🔁",
   language: "python",
   visualizations: ["loop", "variables"],
-  loopItems: [3, 5, 7],
+  forLoop: { target: "n", iterable: "[3, 5, 7]", kind: "list", items: [3, 5, 7], body: ["total = total + n"], after: "print(total)" },
   code: `total = 0
 for n in [3, 5, 7]:
     total = total + n
 print(total)`,
-  steps: [
-    { line: 1, vars: { total: int(0) }, highlight: "total", note: "Start with total at 0." },
-    { line: 2, vars: { total: int(0), n: int(3) }, loopIndex: 0, highlight: "n", note: "Lap 1: n takes the first item, 3." },
-    { line: 3, vars: { total: int(0), n: int(3) }, loopIndex: 0, calc: loopCalc(0, 3, "calculate"), note: "Work out total + n: 0 + 3 is 3." },
-    { line: 3, vars: { total: int(3), n: int(3) }, loopIndex: 0, highlight: "total", calc: loopCalc(0, 3, "assign"), note: "total now refers to 3." },
-    { line: 2, vars: { total: int(3), n: int(5) }, loopIndex: 1, highlight: "n", note: "Back to line 2. Lap 2: n is now 5." },
-    { line: 3, vars: { total: int(3), n: int(5) }, loopIndex: 1, calc: loopCalc(3, 5, "calculate"), note: "Work out total + n: 3 + 5 is 8." },
-    { line: 3, vars: { total: int(8), n: int(5) }, loopIndex: 1, highlight: "total", calc: loopCalc(3, 5, "assign"), note: "total now refers to 8." },
-    { line: 2, vars: { total: int(8), n: int(7) }, loopIndex: 2, highlight: "n", note: "Lap 3: n is 7, the last item." },
-    {
-      line: 3,
-      vars: { total: int(8), n: int(7) },
-      loopIndex: 2,
-      calc: loopCalc(8, 7, "calculate"),
-      note: "Work out total + n: 8 + 7 is 15.",
-      checkpoint: {
-        prompt: "`total` refers to 8 and `n` refers to 7. What will `total + n` work out to?",
-        choices: [
-          { id: "15", text: "`15`" },
-          { id: "7", text: "`7`", feedback: "That's just `n`. The line adds `n` to what `total` already refers to." },
-          { id: "8", text: "`8`", feedback: "8 is what `total` refers to before this line. Add `n` to it." },
-        ],
-        answer: "15",
-        explanation: "Each lap adds the current item to the running total: 8 + 7 is 15.",
-      },
-    },
-    { line: 3, vars: { total: int(15), n: int(7) }, loopIndex: 2, highlight: "total", calc: loopCalc(8, 7, "assign"), note: "total now refers to 15." },
-    { line: 2, vars: { total: int(15), n: int(7) }, loopIndex: 3, note: "Back to line 2 once more, but there are no items left. The loop ends." },
-    { line: 4, vars: { total: int(15), n: int(7) }, loopIndex: 3, output: ["15"], note: "Python carries on after the loop and prints 15." },
-  ],
+  steps: buildSteps([
+    { line: 1, set: { total: py.int(0) }, note: "Start with total at 0." },
+    ...forLap(0, 3, 0, "Next item available? Yes: the first item, 3, rises out of the list."),
+    ...forLap(1, 5, 3, "Back to the top. Another item? Yes: 5."),
+    ...forLap(2, 7, 8, "Another item? Yes: 7, the last one.").map((s, i) =>
+      i === 2
+        ? {
+            ...s,
+            checkpoint: {
+              prompt: "`total` refers to 8 and `n` refers to 7. What will `total + n` work out to?",
+              choices: [
+                { id: "15", text: "`15`" },
+                { id: "7", text: "`7`", feedback: "That's just `n`. The line adds `n` to what `total` already refers to." },
+                { id: "8", text: "`8`", feedback: "8 is what `total` refers to before this line. Add `n` to it." },
+              ],
+              answer: "15",
+              explanation: "Each lap adds the current item to the running total: 8 + 7 is 15.",
+            },
+          }
+        : s,
+    ),
+    { line: 2, forLoop: { at: "exit", index: 3 }, note: "Back to line 2 once more. Next item available? No, so the loop ends." },
+    { line: 4, forLoop: { at: "exit", index: 3 }, print: ["15"], note: "Python carries on after the loop and prints 15." },
+  ]),
 };
 
 const appendCall = (phase: "call" | "result") => ({
@@ -326,17 +328,17 @@ const whileLap = (count: number) => [
     whileLoop: { checks: count, at: "check" as const, result: true },
     note: `Check ${count}: is ${count} <= 3? True, so the body runs.`,
   },
-  { line: 4, whileLoop: { checks: count, at: "body" as const, result: true }, print: [String(count)], note: `print(count) shows ${count}.` },
+  { line: 4, whileLoop: { checks: count, at: "body" as const, result: true, bodyLine: 0 }, print: [String(count)], note: `print(count) shows ${count}.` },
   {
     line: 5,
-    whileLoop: { checks: count, at: "body" as const, result: true },
+    whileLoop: { checks: count, at: "body" as const, result: true, bodyLine: 1 },
     calc: countCalc(count, "calculate"),
     note: `count += 1 is short for count = count + 1. Python works out ${count} + 1.`,
   },
   {
     line: 5,
     set: { count: py.int(count + 1) },
-    whileLoop: { checks: count, at: "body" as const, result: true },
+    whileLoop: { checks: count, at: "body" as const, result: true, bodyLine: 1 },
     calc: countCalc(count, "assign"),
     note: `count now refers to ${count + 1}. Back to the while line.`,
   },
@@ -348,7 +350,7 @@ const whileLoop: Example = {
   emoji: "⏳",
   language: "python",
   visualizations: ["loop", "variables"],
-  whileLoop: { condition: "count <= 3", body: ["print(count)", "count += 1"] },
+  whileLoop: { setup: ["count = 1"], condition: "count <= 3", body: ["print(count)", "count += 1"] },
   code: `count = 1
 
 while count <= 3:

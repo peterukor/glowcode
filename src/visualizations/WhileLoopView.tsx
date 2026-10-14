@@ -1,10 +1,17 @@
 import type { WhileLoopShape, WhileLoopTrace } from "@/types/trace";
+import { DecisionNode, FlowEdge, LoopBack, LoopBranch, OperationNode } from "./FlowParts";
 
 /**
- * A while loop drawn as a fixed structure: the condition, the body it runs while True,
- * the arrow back to the condition, and the way out when it's False. Nothing moves between
- * steps; the current part glows, and the condition's result appears only once Python has
- * checked it. Before the loop starts (no trace yet) everything is shown idle.
+ * A while loop as a flowchart built from the same parts as the for loop:
+ *
+ *   setup (count = 1)
+ *   ◇ count <= 3 ?  —False→  after the loop
+ *        │ True
+ *   body lines …   ↺ back to the condition
+ *
+ * The condition is the centre of attention: it glows each time it's checked and shows the
+ * real True / False result (including the final False). Body lines glow as they run.
+ * Nothing moves between steps; only what glows changes.
  */
 export function WhileLoopView({ shape, trace }: { shape: WhileLoopShape; trace?: WhileLoopTrace }) {
   const at = trace?.at;
@@ -13,51 +20,39 @@ export function WhileLoopView({ shape, trace }: { shape: WhileLoopShape; trace?:
   const inBody = at === "body";
   const exited = at === "exit";
   const resultLabel = result === undefined ? undefined : result ? "True" : "False";
+  const lastLine = shape.body.length - 1;
 
   return (
     <div className="loop-while flex flex-col items-stretch gap-2" role="group" aria-label={`while loop: ${shape.condition}`}>
-      <div className="flex items-stretch gap-3">
-        <div className="flex flex-1 flex-col items-stretch gap-2">
-          {/* The condition */}
-          <div className="viz-node loop-condition" data-on={checking || undefined}>
-            <p className="viz-caption">{trace ? `check ${trace.checks}` : "condition"}</p>
-            <p className="flex flex-wrap items-center justify-between gap-2 font-mono font-bold">
-              <span>
-                <span className="text-syn-kw">while</span> {shape.condition}
-              </span>
-              {resultLabel && (
-                <span className="viz-result" data-result={resultLabel.toLowerCase()}>
-                  {result ? "✓" : "✗"} {resultLabel}
-                </span>
-              )}
-            </p>
-          </div>
-
-          {/* True → body */}
-          <p className="viz-edge" data-on={(inBody || (checking && result === true)) || undefined}>
-            <span aria-hidden>↓</span> True: run the body
-          </p>
-          <div className="viz-node loop-body" data-on={inBody || undefined} data-skipped={exited || undefined}>
-            <p className="viz-caption">body</p>
-            {shape.body.map((line, i) => (
-              <p key={i} className="font-mono text-sm">
-                {line}
-              </p>
-            ))}
-          </div>
-        </div>
-
-        {/* The way back up */}
-        <div className="viz-edge viz-edge-back" data-on={inBody || undefined} aria-hidden>
-          <span>↺</span>
-          <span className="[writing-mode:vertical-rl]">back to the check</span>
-        </div>
+      {shape.setup?.map((line, i) => (
+        <OperationNode key={i} code={line} caption={i === 0 ? "before the loop" : undefined} done={!!trace} />
+      ))}
+      <div className="loop-condition" data-on={checking || undefined}>
+        <DecisionNode
+          on={checking}
+          caption={trace ? `check ${trace.checks}` : "condition"}
+          answer={checking && resultLabel ? { text: resultLabel, positive: !!result } : undefined}
+        >
+          {shape.condition}?
+        </DecisionNode>
       </div>
-
-      {/* False → out */}
-      <p className="viz-edge" data-on={(exited || (checking && result === false)) || undefined}>
-        <span aria-hidden>↓</span> False: leave the loop
-      </p>
+      <LoopBranch
+        exit={exited || (checking && result === false)}
+        back={<LoopBack on={inBody && (trace?.bodyLine === undefined || trace.bodyLine === lastLine)} label="back to the check" />}
+      >
+        <FlowEdge label="True: run the body" on={inBody || (checking && result === true)} />
+        <div className="loop-body flex flex-col gap-1.5" data-on={inBody || undefined} data-skipped={exited || undefined}>
+          {shape.body.map((line, i) => (
+            <OperationNode
+              key={i}
+              code={line}
+              caption={i === 0 ? "body" : undefined}
+              on={inBody && (trace?.bodyLine === undefined || trace.bodyLine === i)}
+            />
+          ))}
+        </div>
+      </LoopBranch>
+      <FlowEdge label="False: leave the loop" on={exited || (checking && result === false)} />
       <div className="viz-node loop-exit" data-on={exited || undefined}>
         <p className="viz-caption">after the loop</p>
         <p className="font-mono text-sm">{shape.after ?? "(the program ends)"}</p>
@@ -69,7 +64,7 @@ export function WhileLoopView({ shape, trace }: { shape: WhileLoopShape; trace?:
           : checking
             ? `Check ${trace.checks}: ${shape.condition} is ${resultLabel ?? "being checked"}.`
             : inBody
-              ? `Running the loop body after check ${trace.checks}.`
+              ? `Running the loop body after check ${trace.checks}${trace.bodyLine !== undefined ? `: ${shape.body[trace.bodyLine]}` : ""}.`
               : `${shape.condition} was False on check ${trace.checks}, so the loop has ended.`}
       </p>
     </div>

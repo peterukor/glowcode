@@ -43,8 +43,8 @@ describe("playground examples", () => {
 
   it("revisits the loop line on every lap and once more to exit", () => {
     const loop = examples.find((e) => e.id === "loop")!;
-    const forLine = loop.steps.filter((s) => s.line === 2);
-    expect(forLine.map((s) => s.loopIndex)).toEqual([0, 1, 2, 3]);
+    const forLine = loop.steps.filter((s) => s.line === 2).map((s) => `${s.forLoop!.at} ${s.forLoop!.index}`);
+    expect(forLine).toEqual(["next 0", "assign 0", "next 1", "assign 1", "next 2", "assign 2", "exit 3"]);
     expect(loop.steps.at(-1)!.output).toEqual(["15"]);
   });
 

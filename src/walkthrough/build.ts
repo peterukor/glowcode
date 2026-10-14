@@ -14,16 +14,23 @@
  *
  * The result is ordinary TraceStep data, validated and checked against Python like any other.
  */
-import type { PyValue, Variables } from "@/types/python";
+import type { PyItem, PyValue, Variables } from "@/types/python";
 import type { TraceStep } from "@/types/trace";
 
-/** Python values, as the trace format stores them. */
+/**
+ * Python values, as the trace format stores them. Collections take an optional object id:
+ * give two variables the same id when they refer to the same object (`b = a`), and different
+ * ids for different objects (`b = a.copy()`).
+ */
 export const py = {
   int: (value: number): PyValue => ({ type: "int", value }),
   float: (value: number): PyValue => ({ type: "float", value }),
   str: (value: string): PyValue => ({ type: "str", value }),
   bool: (value: boolean): PyValue => ({ type: "bool", value }),
-  list: (value: (string | number)[]): PyValue => ({ type: "list", value }),
+  list: (value: PyItem[], id?: string): PyValue => ({ type: "list", value, ...(id ? { id } : {}) }),
+  tuple: (value: PyItem[], id?: string): PyValue => ({ type: "tuple", value, ...(id ? { id } : {}) }),
+  set: (value: PyItem[], id?: string): PyValue => ({ type: "set", value, ...(id ? { id } : {}) }),
+  dict: (value: [PyItem, PyItem][], id?: string): PyValue => ({ type: "dict", value, ...(id ? { id } : {}) }),
   none: (): PyValue => ({ type: "None", value: null }),
 };
 

@@ -65,10 +65,10 @@ describe("playback controller", () => {
 
   it("describes repeated lines and several events on one line", () => {
     const loop = getExample("loop").steps;
-    expect(linePosition(loop, 2)).toBeUndefined(); // line 3, first time
-    expect(linePosition(loop, 3)).toBe("same line, next step");
-    expect(linePosition(loop, 4)).toBe("running again");
-    expect(linePosition(loop, 7)).toBe("running again (3rd time)");
+    expect(linePosition(loop, 1)).toBeUndefined(); // the for line, first time
+    expect(linePosition(loop, 2)).toBe("same line, next step"); // the item is assigned
+    expect(linePosition(loop, 5)).toBe("running again"); // lap 2
+    expect(linePosition(loop, 9)).toBe("running again (3rd time)");
   });
 
   it("knows which names a calculation reads", () => {
@@ -257,8 +257,121 @@ describe("matchRecording (replaying against Python)", () => {
     expect(matchRecording(extra, recording).problems.join()).toMatch(/doesn't run line 2 at this point/);
   });
 
-  it("only replays module-level code without input()", () => {
+  it("replays functions too, but not input(), classes or imports", () => {
     expect(replayable(base)).toBe(true);
-    expect(replayable(getExample("function"))).toBe(false);
+    expect(replayable(getExample("function"))).toBe(true);
+    expect(replayable({ ...base, code: 'name = input("Name: ")' })).toBe(false);
+    expect(replayable({ ...base, code: "import math\nx = 1" })).toBe(false);
+  });
+
+  it("compares which names share one object with Python's id()s", () => {
+    const shared: Walkthrough = {
+      ...base,
+      code: "a = [1]\nb = a",
+      steps: [
+        { line: 1, vars: { a: py.list([1], "L1") }, note: "n" },
+        { line: 2, vars: { a: py.list([1], "L1"), b: py.list([1], "L1") }, note: "n" },
+      ],
+    };
+    const a = { list: [1] };
+    const rec: RecordedEvent[] = [
+      { line: 1, vars: {}, out: "", ids: {} },
+      { line: 2, vars: { a }, out: "", ids: { a: 7 } },
+      { line: null, vars: { a, b: a }, out: "", ids: { a: 7, b: 7 } },
+    ];
+    expect(matchRecording(shared, rec).problems).toEqual([]);
+    // Python made a copy, but the walkthrough draws one shared object.
+    const copied = rec.map((e, i) => (i === 2 ? { ...e, ids: { a: 7, b: 8 } } : e));
+    expect(matchRecording(shared, copied).problems.join()).toMatch(/names sharing one object: Python has \[\], the walkthrough shows \[a=b\]/);
+  });
+
+  it("follows a call into its function and back to the waiting line", () => {
+    const call: Walkthrough = {
+      ...base,
+      code: "def double(n):\n    return n * 2\nx = double(4)",
+      steps: [
+        { line: 1, vars: {}, note: "n" },
+        { line: 3, vars: {}, note: "n" },
+        { line: 2, vars: { n: py.int(4) }, frame: "double", callers: [{ name: "<module>", vars: {}, calling: "double(4)" }], note: "n" },
+        { line: 3, vars: { x: py.int(8) }, note: "n" },
+      ],
+    };
+    const main = (vars: Record<string, unknown>) => ({ name: "<module>", vars });
+    const rec: RecordedEvent[] = [
+      { line: 1, vars: {}, out: "", stack: [main({})] },
+      { line: 3, vars: {}, out: "", stack: [main({})] },
+      { line: 2, vars: { n: 4 }, out: "", stack: [main({}), { name: "double", vars: { n: 4 } }] },
+      { line: 3, vars: {}, out: "", stack: [main({})], kind: "return" },
+      { line: null, vars: { x: 8 }, out: "", stack: [main({ x: 8 })] },
+    ];
+    expect(matchRecording(call, rec).problems).toEqual([]);
+    const wrongFrame = { ...call, steps: call.steps.map((s, i) => (i === 2 ? { ...s, frame: "triple" } : s)) };
+    expect(matchRecording(wrongFrame, rec).problems.join()).toMatch(/call stack: Python has <module> > double, the walkthrough shows <module> > triple/);
+  });
+});
+
+describe("validateWalkthrough: collections, loops, trees and frames", () => {
+  const lists = (steps: Walkthrough["steps"]): Walkthrough => ({ ...base, visualizations: ["collections"], steps });
+
+  it("checks a mutation against the object before it, and keeps its identity", () => {
+    const ok = lists([
+      { line: 1, vars: { xs: py.list([1, 2], "L") }, note: "n" },
+      { line: 1, vars: { xs: py.list([1, 2, 3], "L") }, mutation: { name: "xs", kind: "append", index: 2, value: 3 }, note: "n" },
+    ]);
+    expect(validateWalkthrough(ok)).toEqual([]);
+    const wrongResult = lists([ok.steps[0]!, { ...ok.steps[1]!, vars: { xs: py.list([3, 1, 2], "L") } }]);
+    expect(validateWalkthrough(wrongResult).join()).toMatch(/after append, "xs" should be \[1, 2, 3\]/);
+    const newObject = lists([ok.steps[0]!, { ...ok.steps[1]!, vars: { xs: py.list([1, 2, 3], "M") } }]);
+    expect(validateWalkthrough(newObject).join()).toMatch(/object id must stay the same/);
+    const popWrong = lists([ok.steps[0]!, { ...ok.steps[1]!, vars: { xs: py.list([1], "L") }, mutation: { name: "xs", kind: "pop", index: 1, removed: 9 } }]);
+    expect(validateWalkthrough(popWrong).join()).toMatch(/says pop removed 9, but index 1 held 2/);
+  });
+
+  it("requires names that share one object to show the same value", () => {
+    const w = lists([{ line: 1, vars: { a: py.list([1], "L"), b: py.list([2], "L") }, note: "n" }]);
+    expect(validateWalkthrough(w).join()).toMatch(/"a" and "b" share object L but show different values/);
+  });
+
+  it("checks indexes, slices and membership results", () => {
+    const w = lists([
+      { line: 1, vars: { s: py.str("abc") }, element: { name: "s", index: -4 }, note: "n" },
+      { line: 1, vars: { s: py.str("abc") }, slice: { name: "s", start: 2, stop: 5 }, note: "n" },
+      { line: 1, vars: { s: py.str("abc"), t: py.set([1, 2], "T") }, membership: { name: "t", value: 3, result: true }, note: "n" },
+    ]);
+    const problems = validateWalkthrough(w).join("\n");
+    expect(problems).toMatch(/element index -4 is out of range/);
+    expect(problems).toMatch(/slice bounds are outside/);
+    expect(problems).toMatch(/says 3 in t is True, but it's False/);
+  });
+
+  it("checks that an expression tree is worked out from the bottom up", () => {
+    const tree = { id: "add", code: "1 + 2 * 3", op: "+", left: { id: "a", code: "1" }, right: { id: "mul", code: "2 * 3", op: "*", left: { id: "b", code: "2" }, right: { id: "c", code: "3" } } };
+    const w: Walkthrough = {
+      ...base,
+      steps: [{ line: 1, vars: {}, calc: { target: "x", parts: [{ code: "1" }, { code: "+" }, { code: "2" }, { code: "*" }, { code: "3" }], result: "7", phase: "calculate", tree, active: "add", done: {} }, note: "n" }],
+    };
+    expect(validateWalkthrough(w).join()).toMatch(/"1 \+ 2 \* 3" is evaluated before "2 \* 3"/);
+  });
+
+  it("checks for-loop events: order, the loop variable, and the exit", () => {
+    const shape = { target: "n", iterable: "[1, 2]", kind: "list" as const, items: [1, 2], body: ["print(n)"] };
+    const w: Walkthrough = {
+      ...base,
+      visualizations: ["loop"],
+      forLoop: shape,
+      steps: [
+        { line: 1, vars: { n: py.int(2) }, forLoop: { at: "assign", index: 1 }, note: "n" },
+        { line: 1, vars: { n: py.int(5) }, forLoop: { at: "assign", index: 0 }, note: "n" },
+        { line: 1, vars: { n: py.int(2) }, forLoop: { at: "exit", index: 1 }, note: "n" },
+      ],
+    };
+    const problems = validateWalkthrough(w).join("\n");
+    expect(problems).toMatch(/can't go backwards/);
+    expect(problems).toMatch(/n should refer to 1 once it's assigned, but the step shows 5/);
+    expect(problems).toMatch(/for-loop index 1 doesn't fit "exit" with 2 items/);
+  });
+
+  it("asks for a stack view only when steps have frames", () => {
+    expect(validateWalkthrough({ ...base, visualizations: ["stack"] }).join()).toMatch(/stack view needs steps with a frame or callers/);
   });
 });

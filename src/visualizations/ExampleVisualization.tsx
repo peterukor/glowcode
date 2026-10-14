@@ -1,17 +1,19 @@
 import type { TraceStep, VisualizationKind, Walkthrough } from "@/types/trace";
 import { readingNames } from "@/walkthrough/controller";
 import { ConditionalFlow, FlowLegend } from "./conditional/ConditionalFlow";
+import { CallStackView } from "./CallStackView";
+import { CollectionsView } from "./CollectionsView";
+import { ForLoopView } from "./ForLoopView";
 import { FunctionView } from "./FunctionView";
 import { LoopView } from "./LoopView";
-import { ListView, StringView } from "./SequenceViews";
 import { VariablesPanel } from "./VariableBox";
 import { WhileLoopView } from "./WhileLoopView";
 
 /**
  * Picks the renderer for one view of one event. Renderers receive data, never code: each
- * one draws the walkthrough's fixed structure (`ifChain`, `loopItems`, `whileLoop`) in the
- * state the event describes (`step.ifChain`, `step.loopIndex`, `step.whileLoop`,
- * `step.call`, `step.element`). Nothing here interprets Python or guesses from line numbers,
+ * one draws the walkthrough's fixed structure (`ifChain`, `forLoop`, `whileLoop`, `loopItems`)
+ * in the state the event describes (`step.ifChain`, `step.forLoop`, `step.whileLoop`,
+ * `step.call`, `step.element`, `step.slice`, `step.mutation`, `step.frame` ...). Nothing here interprets Python or guesses from line numbers,
  * so a future tracer that produces the same data gets the same pictures.
  */
 export function ExampleVisualization({
@@ -40,6 +42,7 @@ export function ExampleVisualization({
       );
 
     case "loop":
+      if (example.forLoop) return <ForLoopView shape={example.forLoop} trace={step.forLoop} vars={step.vars} />;
       if (example.whileLoop) return <WhileLoopView shape={example.whileLoop} trace={step.whileLoop} />;
       if (!example.loopItems) return null;
       return (
@@ -55,22 +58,15 @@ export function ExampleVisualization({
         <p className="text-sm text-muted-foreground">No function is being called on this step.</p>
       );
 
-    case "collections": {
-      // Every list and string the program has, with the item being used marked.
-      const sequences = Object.entries(step.vars).filter(([, v]) => v.type === "list" || v.type === "str");
-      if (!sequences.length) return <p className="text-sm text-muted-foreground">No lists or strings yet.</p>;
-      return (
-        <div className="space-y-6">
-          {sequences.map(([name, v]) => {
-            const active = step.element?.name === name ? step.element.index : undefined;
-            return v.type === "list" ? (
-              <ListView key={name} name={name} items={v.value} activeIndex={active} />
-            ) : v.type === "str" ? (
-              <StringView key={name} name={name} text={v.value} activeIndex={active} />
-            ) : null;
-          })}
-        </div>
-      );
-    }
+    case "collections":
+      return <CollectionsView step={step} previous={previous} strings={indexedNames(example)} />;
+
+    case "stack":
+      return <CallStackView step={step} previous={previous} />;
   }
+}
+
+/** Names the walkthrough indexes, slices or tests membership in: the strings worth drawing as sequences. */
+function indexedNames(w: Walkthrough): Set<string> {
+  return new Set(w.steps.flatMap((s) => [s.element?.name, s.slice?.name, s.membership?.name].filter((n): n is string => !!n)));
 }

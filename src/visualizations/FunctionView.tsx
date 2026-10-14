@@ -21,7 +21,7 @@ export function FunctionView({ call }: { call: CallEvent }) {
     <div className="fn flex flex-col items-center gap-1.5" role="group" aria-label={`Function call: ${label}`}>
       <div className="fn-node" data-on={at === 0 || undefined}>
         <p className="fn-caption">{inputCaption(call)}</p>
-        <p className="flex flex-wrap justify-center gap-2 font-mono font-bold">
+        <p className="flex flex-wrap justify-center gap-x-3 gap-y-1 font-mono font-bold">
           {call.receiver && (
             <span>
               {call.receiver}
@@ -29,7 +29,14 @@ export function FunctionView({ call }: { call: CallEvent }) {
             </span>
           )}
           {call.args.map((a, i) => (
-            <span key={i}>{a}</span>
+            <span key={i} className="inline-flex flex-col items-center">
+              {/* Parameters are separate names, so each pairing gets its own box. */}
+              <span className={call.params ? "rounded-lg border-2 border-border bg-background px-2" : undefined}>
+                {call.params?.[i] && <span className="font-normal text-muted-foreground">{call.params[i]} = </span>}
+                {a}
+              </span>
+              {call.argFrom?.[i] && <span className="fn-caption normal-case tracking-normal">returned by {call.argFrom[i]}</span>}
+            </span>
           ))}
           {!call.receiver && !call.args.length && <span className="text-muted-foreground">nothing</span>}
         </p>
@@ -57,6 +64,16 @@ export function FunctionView({ call }: { call: CallEvent }) {
         )}
       </div>
 
+      {call.feeds && (
+        <>
+          <Arrow on={at === 2} />
+          <div className="fn-node fn-feeds" data-on={at === 2 || undefined}>
+            <p className="fn-caption">{done ? "the returned value goes into" : "its result will go into"}</p>
+            <p className="font-mono font-bold">{call.feeds}</p>
+          </div>
+        </>
+      )}
+
       {call.assignTo && (
         <>
           <Arrow on={at === 3} />
@@ -77,6 +94,7 @@ export function FunctionView({ call }: { call: CallEvent }) {
 
 function inputCaption(call: CallEvent) {
   if (call.receiver) return call.args.length ? "Called on, with" : "Called on";
+  if (call.params?.length) return call.args.length === 1 ? "Argument → parameter" : "Arguments → parameters";
   return call.args.length === 1 ? "Input" : "Inputs";
 }
 
@@ -108,5 +126,6 @@ function describe(call: CallEvent, label: string, done: boolean) {
     call.changes !== undefined && `changes ${call.receiver ?? "its object"} to ${call.changes}`,
   ].filter(Boolean);
   const stored = call.phase === "assign" && call.assignTo ? ` ${call.assignTo} now refers to ${call.returns}.` : "";
-  return `${label} with ${inputs} ${parts.join(" and ")}.${stored}`;
+  const feeds = call.feeds ? ` The returned value becomes the argument of ${call.feeds}.` : "";
+  return `${label} with ${inputs} ${parts.join(" and ")}.${stored}${feeds}`;
 }

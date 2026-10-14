@@ -1,5 +1,5 @@
 import type { IfChain, IfChainTrace } from "./conditional";
-import type { Variables } from "./python";
+import type { PyItem, Variables } from "./python";
 
 /**
  * One execution event: the unit a walkthrough steps through. This file is the contract
@@ -45,8 +45,20 @@ export type TraceStep = {
   ifChain?: IfChainTrace;
   /** While-loops: how many times the condition has been checked, the latest result, and where Python is. */
   whileLoop?: WhileLoopTrace;
-  /** One item of a list or string being used, e.g. `word[0]`. */
-  element?: { name: string; index: number };
+  /** For-loops drawn as a flowchart: where Python is and which item is current. */
+  forLoop?: ForLoopTrace;
+  /** One item being used: `word[0]`, `scores["ada"]`. Negative indexes count from the end. */
+  element?: { name: string; index?: number; key?: PyItem };
+  /** A slice being taken: `word[1:4]` selects indexes 1, 2, 3 (the stop is excluded). */
+  slice?: { name: string; start: number; stop: number };
+  /** A membership test: `3 in numbers`. */
+  membership?: { name: string; value: PyItem; result: boolean };
+  /** A collection changed in place (the object keeps its identity). */
+  mutation?: MutationEvent;
+  /** The function this event runs in. Leave out for the main program. */
+  frame?: string;
+  /** The frames waiting for this one, oldest first (the main program first). */
+  callers?: CallerFrame[];
   /** An assignment that calculates something, split into "work it out" and "store it". */
   calc?: CalcEvent;
   /** A function or method call: what goes in, and what comes out (returned, printed, changed). */
@@ -75,10 +87,92 @@ export type CalcEvent = {
   /** The value the right side works out to, as Python would write it. */
   result: string;
   phase: "read" | "calculate" | "assign";
+  /**
+   * For expressions with more than one operator: the expression as a tree, so evaluation order
+   * (precedence, parentheses) is visible. `parts` still holds the flat form.
+   */
+  tree?: ExprNode;
+  /** The operator node being evaluated in this event. */
+  active?: string;
+  /** Results of operator nodes evaluated so far, by node id: { mul: "6" }. */
+  done?: Record<string, string>;
+};
+
+/**
+ * One node of an expression tree. Operands are names or literals (`value` is what a name
+ * referred to); operators have two children. `code` is the node's own source, with brackets
+ * where needed, so it can be checked in Python: "3 * 2", "(4 + 3) * 2".
+ */
+export type ExprNode =
+  | { id: string; code: string; value?: string }
+  | { id: string; code: string; op: string; left: ExprNode; right: ExprNode };
+
+/** A change to a list, dict or set in place. */
+export type MutationEvent = {
+  /** The variable whose object changes. */
+  name: string;
+  kind: "append" | "insert" | "set" | "pop" | "remove" | "add" | "discard" | "set-key" | "delete-key";
+  /** The list position involved (after the change for append/insert, before it for pop/remove). */
+  index?: number;
+  /** The dict key involved. */
+  key?: PyItem;
+  /** The value added or stored. */
+  value?: PyItem;
+  /** The value that left the collection, or the value that was replaced. */
+  removed?: PyItem;
+};
+
+/** A function that is waiting for the current one to return. */
+export type CallerFrame = {
+  /** "<module>" for the main program, else the function's name. */
+  name: string;
+  /** Its own variables (parameters and locals). */
+  vars: Variables;
+  /** The call it's waiting on, as written: "double(value)". */
+  calling: string;
+};
+
+/**
+ * The shape of a `for` loop, drawn as a flowchart: the iterable, "Next item available?",
+ * the loop variable, the body, the loop-back and the exit.
+ */
+export type ForLoopShape = {
+  /** The loop variable as written: "number". */
+  target: string;
+  /** The iterable as written after `in`: "[10, 20, 30]", "word", "range(1, 6)". */
+  iterable: string;
+  /**
+   * How to draw the iterable. Lists, tuples and strings are indexed sequences; range values
+   * are produced one at a time; generators don't reveal values before producing them; a dict
+   * gives its keys; a set has no guaranteed order.
+   */
+  kind: "list" | "tuple" | "str" | "range" | "dict" | "set" | "generator";
+  /** The items the loop gets, in the order this run gets them. */
+  items: PyItem[];
+  /** The body's lines, as written (without indentation). */
+  body: string[];
+  /** The first line after the loop, if there is one. */
+  after?: string;
+};
+
+export type ForLoopTrace = {
+  /**
+   * - next: Python asks for the next item (it pops out of the iterable, or there is none)
+   * - assign: the item is assigned to the loop variable
+   * - body: a body line runs (`bodyLine`)
+   * - exit: no item is left, so the loop ends
+   */
+  at: "next" | "assign" | "body" | "exit";
+  /** The current item (0-based). At "exit" it equals the number of items. */
+  index: number;
+  /** The body line running (0-based), at "body". */
+  bodyLine?: number;
 };
 
 /** The shape of a `while` loop, drawn as: condition → (True) body → back to the condition; (False) → after. */
 export type WhileLoopShape = {
+  /** Lines before the loop that set it up, e.g. ["count = 1"]. */
+  setup?: string[];
   /** As written after `while`, e.g. "count <= 3". */
   condition: string;
   /** The loop body's lines, as written (without indentation). */
@@ -94,6 +188,8 @@ export type WhileLoopTrace = {
   at: "check" | "body" | "exit";
   /** The result of the latest check. Only set once Python has evaluated it. */
   result?: boolean;
+  /** The body line running (0-based), at "body". */
+  bodyLine?: number;
 };
 
 /**
@@ -109,6 +205,12 @@ export type CallEvent = {
   receiver?: string;
   /** The value the receiver refers to, shown with it: `'["pen"]'`. */
   receiverValue?: string;
+  /** For user-defined functions: parameter names, matched to `args` by position. */
+  params?: string[];
+  /** Arguments that are the returned value of an inner call: { 0: "len()" }. */
+  argFrom?: Record<number, string>;
+  /** For an inner call: the outer call its returned value goes into, e.g. "print()". */
+  feeds?: string;
   /** Argument values, as Python would write them: ['"cat"']. */
   args: string[];
   phase: "call" | "run" | "result" | "assign";
@@ -131,7 +233,7 @@ export type Checkpoint = {
   explanation: string;
 };
 
-export type VisualizationKind = "variables" | "flow" | "collections" | "loop" | "function";
+export type VisualizationKind = "variables" | "flow" | "collections" | "loop" | "function" | "stack";
 
 export type Language = "python" | "java";
 
@@ -154,6 +256,8 @@ export type Walkthrough = {
   loopItems?: (string | number)[];
   /** Structure of the `while` loop in `code`, for the loop visualization. */
   whileLoop?: WhileLoopShape;
+  /** Structure of the `for` loop in `code`, for the loop flowchart. */
+  forLoop?: ForLoopShape;
 };
 
 /** A playground demo: a walkthrough plus a chip icon. */

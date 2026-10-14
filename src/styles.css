@@ -48,6 +48,9 @@
   --color-t-bool: var(--t-bool);
   --color-t-list: var(--t-list);
   --color-t-none: var(--t-none);
+  --color-t-tuple: var(--t-tuple);
+  --color-t-dict: var(--t-dict);
+  --color-t-set: var(--t-set);
 
   /* code */
   --color-code-bg: var(--code-bg);
@@ -87,6 +90,9 @@
   --t-bool: oklch(0.72 0.16 75);
   --t-list: var(--grape);
   --t-none: oklch(0.6 0.02 280);
+  --t-tuple: oklch(0.58 0.15 320);
+  --t-dict: oklch(0.6 0.14 45);
+  --t-set: oklch(0.58 0.12 190);
 
   --code-bg: oklch(0.21 0.04 285);
   --code-fg: oklch(0.93 0.02 285);
@@ -118,6 +124,9 @@
   --border: oklch(0.32 0.04 285);
   --code-bg: oklch(0.13 0.03 285);
   --t-bool: oklch(0.8 0.15 80);
+  --t-tuple: oklch(0.74 0.14 320);
+  --t-dict: oklch(0.76 0.13 50);
+  --t-set: oklch(0.76 0.11 190);
   --gradient-hero: radial-gradient(60% 60% at 15% 10%, oklch(0.45 0.2 293 / 0.45), transparent 70%),
     radial-gradient(50% 50% at 90% 20%, oklch(0.45 0.12 185 / 0.35), transparent 70%),
     radial-gradient(50% 60% at 60% 100%, oklch(0.5 0.12 60 / 0.25), transparent 70%);
@@ -437,6 +446,505 @@
     transition: none;
     transform: none !important;
   }
+}
+
+/* ------------------------------------------------ segmented sequences
+   Lists, tuples, strings and produced values share one look: a single long container divided
+   into cells, indexes above (and from the end below, when used). The row is laid out once and
+   slides by whole cells (--start), so a moving window glides instead of jumping. Cell states
+   come from data-state; each also has words for screen readers. */
+
+.seq {
+  --seq-color: var(--t-list);
+  display: inline-flex;
+  max-width: 100%;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.seq[data-tone="tuple"] {
+  --seq-color: var(--t-tuple);
+}
+.seq[data-tone="str"] {
+  --seq-color: var(--t-str);
+}
+.seq[data-tone="neutral"] {
+  --seq-color: var(--muted-foreground);
+}
+.seq-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.seq-row {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.35rem;
+}
+.seq-more {
+  visibility: hidden;
+  font-weight: 800;
+  color: var(--muted-foreground);
+}
+.seq-more[data-show] {
+  visibility: visible;
+}
+.seq-viewport {
+  position: relative;
+  width: calc(var(--cell) * var(--count) + 4px);
+  max-width: 100%;
+  margin: 1.4rem 0 1.5rem;
+  border: 2px solid color-mix(in srgb, var(--seq-color) 60%, transparent);
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--seq-color) 5%, var(--card));
+}
+.seq-clip {
+  /* Clip sideways (the window), but let raised items and index labels show above and below. */
+  clip-path: inset(-2rem 0 -2rem 0);
+}
+.seq-track {
+  display: flex;
+  transform: translateX(calc(var(--cell) * var(--start) * -1));
+  transition: transform 0.3s ease;
+}
+.seq-cell {
+  position: relative;
+  display: grid;
+  flex: 0 0 var(--cell);
+  height: 2.6rem;
+  place-items: center;
+  border-right: 2px solid color-mix(in srgb, var(--seq-color) 30%, transparent);
+}
+.seq-cell:last-child {
+  border-right: 0;
+}
+.seq-value {
+  border: 2px solid transparent;
+  border-radius: 0.55rem;
+  padding: 0.05rem 0.35rem;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  white-space: pre;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease,
+    opacity 0.25s ease;
+}
+.seq-index {
+  position: absolute;
+  top: -1.45rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  transition: color 0.25s ease;
+}
+.seq-index-neg {
+  top: auto;
+  bottom: -1.45rem;
+}
+.seq-note {
+  position: absolute;
+  bottom: -1.5rem;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--viz-active);
+}
+.seq-viewport[data-negative] .seq-note {
+  bottom: -2.6rem;
+}
+.seq-viewport[data-negative] {
+  margin-bottom: 2.6rem;
+}
+.seq-empty {
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+.seq-caption {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+.seq-cell[data-state="active"] .seq-value,
+.seq-cell[data-state="selected"] .seq-value {
+  border-color: var(--viz-active);
+  background: color-mix(in srgb, var(--viz-active) 14%, var(--card));
+  box-shadow: var(--viz-glow);
+}
+.seq-cell[data-state="active"] .seq-index,
+.seq-cell[data-state="raised"] .seq-index,
+.seq-cell[data-state="selected"] .seq-index {
+  color: var(--viz-active);
+}
+.seq-cell[data-state="raised"] .seq-value {
+  transform: translateY(-0.5rem) scale(1.06);
+  border-color: var(--viz-active);
+  background: var(--card);
+  box-shadow: var(--viz-glow);
+}
+.seq-cell[data-state="visited"] .seq-value {
+  opacity: 0.45;
+}
+.seq-cell[data-state="visited"]::after {
+  content: "✓";
+  position: absolute;
+  top: 0.1rem;
+  right: 0.25rem;
+  font-size: 9px;
+  color: var(--muted-foreground);
+}
+.seq-cell[data-state="added"] .seq-value {
+  border-color: var(--teal);
+  background: color-mix(in srgb, var(--teal) 18%, var(--card));
+  animation: pop-in 0.3s ease;
+}
+.seq-cell[data-state="changed"] .seq-value {
+  border-color: var(--sun);
+  background: color-mix(in srgb, var(--sun) 25%, var(--card));
+}
+.seq-cell[data-state="pending"] .seq-value {
+  border-style: dashed;
+  border-color: var(--border);
+  color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seq-track,
+  .seq-value,
+  .seq-index {
+    transition: none;
+  }
+  .seq-cell[data-state="added"] .seq-value {
+    animation: none;
+  }
+  .seq-cell[data-state="raised"] .seq-value {
+    /* Still clearly picked: outlined and glowing, just without the movement. */
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------ dicts and sets */
+
+.dict-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--t-dict) 60%, transparent);
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--t-dict) 5%, var(--card));
+  font-family: var(--font-mono, monospace);
+  font-size: 0.9rem;
+}
+.dict-table tr + tr > * {
+  border-top: 2px solid color-mix(in srgb, var(--t-dict) 25%, transparent);
+}
+.dict-key,
+.dict-value {
+  padding: 0.3rem 0.75rem;
+  text-align: left;
+  font-weight: 700;
+  transition: background-color 0.25s ease;
+}
+.dict-arrow {
+  padding: 0 0.25rem;
+  color: var(--muted-foreground);
+}
+.dict-table tr[data-state="active"] > * {
+  background: color-mix(in srgb, var(--viz-active) 22%, var(--card));
+  box-shadow:
+    inset 0 2px 0 var(--viz-active),
+    inset 0 -2px 0 var(--viz-active);
+  color: var(--foreground);
+}
+.dict-table tr[data-state="active"] > :first-child {
+  box-shadow:
+    inset 2px 0 0 var(--viz-active),
+    inset 0 2px 0 var(--viz-active),
+    inset 0 -2px 0 var(--viz-active);
+}
+.dict-table tr[data-state="active"] > :last-child {
+  box-shadow:
+    inset -2px 0 0 var(--viz-active),
+    inset 0 2px 0 var(--viz-active),
+    inset 0 -2px 0 var(--viz-active);
+}
+.dict-table tr[data-state="active"] .dict-arrow {
+  color: var(--viz-active);
+}
+.dict-table tr[data-state="changed"] > * {
+  background: color-mix(in srgb, var(--sun) 22%, transparent);
+}
+.dict-table tr[data-state="added"] > * {
+  background: color-mix(in srgb, var(--teal) 18%, transparent);
+}
+.seq-note.static {
+  position: static;
+}
+.set-box {
+  display: flex;
+  max-width: 28rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border: 2px dashed color-mix(in srgb, var(--t-set) 60%, transparent);
+  border-radius: 2rem;
+  background: color-mix(in srgb, var(--t-set) 5%, var(--card));
+  padding: 0.75rem 1rem;
+}
+.set-item {
+  border: 2px solid color-mix(in srgb, var(--t-set) 45%, transparent);
+  border-radius: 999px;
+  background: var(--card);
+  padding: 0.1rem 0.6rem;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  transition:
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.set-item[data-state="active"] {
+  border-color: var(--viz-active);
+  box-shadow: var(--viz-glow);
+}
+.set-item[data-state="added"] {
+  border-color: var(--teal);
+  background: color-mix(in srgb, var(--teal) 18%, var(--card));
+}
+
+/* ------------------------------------------------ loop flowcharts
+   for and while share the decision diamond, edges, loop-back and operation boxes. */
+
+.viz-decision-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.viz-decision {
+  /* A wide diamond: the shape says "a question with two ways out". */
+  position: relative;
+  display: grid;
+  min-width: 13rem;
+  place-items: center;
+  padding: 0.9rem 2.6rem;
+  opacity: var(--viz-idle-opacity);
+  transition:
+    opacity var(--viz-speed) ease,
+    filter var(--viz-speed) ease;
+}
+.viz-decision::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: var(--border);
+  transition: background-color var(--viz-speed) ease;
+}
+.viz-decision::after {
+  content: "";
+  position: absolute;
+  inset: 2px 4px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: var(--card);
+}
+.viz-decision-text {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+.viz-decision[data-on] {
+  opacity: 1;
+  filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--viz-active) 45%, transparent));
+}
+.viz-decision[data-on]::before {
+  background: var(--viz-active);
+}
+.viz-decision[data-on]::after {
+  background: color-mix(in srgb, var(--viz-active) 8%, var(--card));
+}
+.viz-op {
+  align-items: flex-start;
+}
+.viz-node[data-done] {
+  opacity: 0.4;
+}
+.flow-branch {
+  /* The left edge is the "no" way out of the decision, running past the branch to the exit. */
+  position: relative;
+  margin-left: 1.15rem;
+  padding-left: 0.9rem;
+}
+.flow-branch::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -0.5rem;
+  bottom: -0.5rem;
+  border-left: 2px dashed var(--border);
+  transition: border-color var(--viz-speed) ease;
+}
+.flow-branch[data-exit]::before {
+  border-left-style: solid;
+  border-color: var(--viz-active);
+}
+.flow-branch + .viz-edge {
+  /* The exit edge continues the "no" line. */
+  padding-left: 0.85rem;
+}
+.for-transfer-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  margin-left: 0.4rem;
+  border: 2px solid var(--viz-active);
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow: var(--viz-glow);
+  padding: 0 0.6rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--foreground);
+  animation: value-travel 0.45s ease both;
+}
+@keyframes value-travel {
+  from {
+    transform: translateY(-1.6rem);
+    opacity: 0.2;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viz-decision,
+  .flow-branch::before {
+    transition: none;
+  }
+  .for-transfer-chip {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------ expression trees */
+
+.expr-tree {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+.expr-tree > .expr-node,
+.expr-tree > .expr-leaf {
+  max-width: 100%;
+}
+.expr-down {
+  align-self: center;
+  width: max-content;
+  color: var(--border);
+  font-size: 1.1rem;
+  line-height: 1.4;
+  transition: color var(--viz-speed) ease;
+}
+.expr-down[data-on] {
+  color: var(--viz-active);
+}
+.expr-node {
+  --expr-line: var(--border);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+.expr-node[data-state="active"],
+.expr-node[data-state="done"] {
+  --expr-line: var(--viz-active);
+}
+.expr-children {
+  display: flex;
+  align-items: flex-end;
+}
+/* Each child gets a line down to a shared bar; the bar joins the children over the stem. */
+.expr-child {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 0.35rem 0.7rem;
+}
+.expr-child::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  height: 0.7rem;
+  border-left: 2px solid var(--expr-line);
+  transition: border-color var(--viz-speed) ease;
+}
+.expr-child::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  border-top: 2px solid var(--expr-line);
+  transition: border-color var(--viz-speed) ease;
+}
+.expr-child:first-child::before {
+  left: 50%;
+  right: 0;
+}
+.expr-child:last-child::before {
+  left: 0;
+  right: calc(50% - 2px);
+}
+.expr-stem {
+  height: 0.6rem;
+  border-left: 2px solid var(--expr-line);
+  transition: border-color var(--viz-speed) ease;
+}
+.expr-op {
+  align-items: center;
+  min-width: 3.25rem;
+  padding-block: 0.3rem;
+}
+.expr-op-line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+.expr-symbol {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.expr-result {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--viz-active);
+}
+.expr-node[data-state="done"] > .expr-op {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--viz-active) 45%, var(--border));
+}
+/* While an operator is worked out, the values flowing into it glow too. */
+.expr-node[data-state="active"] > .expr-children > .expr-child > .expr-leaf,
+.expr-node[data-state="active"] > .expr-children > .expr-child > .expr-node[data-state="done"] > .expr-op {
+  border-color: var(--viz-active);
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .expr-child::before,
+  .expr-child::after,
+  .expr-stem,
+  .expr-down {
+    transition: none;
+  }
+}
+.loop-body[data-skipped] {
+  opacity: 0.35;
 }
 
 /* -------------------------------------------------- conditional flow tree

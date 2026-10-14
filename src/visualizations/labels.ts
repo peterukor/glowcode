@@ -7,4 +7,5 @@ export const visualizationLabels: Record<VisualizationKind, string> = {
   collections: "Collections",
   loop: "Loop",
   function: "Function",
+  stack: "Call stack",
 };

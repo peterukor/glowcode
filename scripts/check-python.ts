@@ -23,9 +23,11 @@ import { join } from "node:path";
 import { courses } from "@/courses/registry";
 import type { Block } from "@/courses/types";
 import { examples } from "@/data/examples";
+import { pythonVisuals } from "@/data/pythonVisuals";
 import { allReferences } from "@/references/registry";
-import type { PyValue, Variables } from "@/types/python";
+import type { Variables } from "@/types/python";
 import type { Walkthrough } from "@/types/trace";
+import { encodeValue } from "@/visualizations/values";
 import { matchRecording, replayable, type EvalRequest, type RecordedEvent } from "@/walkthrough/replay";
 
 type Run = { stdout: string[]; stderr: string; ok: boolean; vars: Record<string, unknown> };
@@ -34,12 +36,31 @@ const dir = mkdtempSync(join(tmpdir(), "glowcode-py-"));
 const problems: string[] = [];
 let checked = 0;
 
+// Turns simple values into the tagged JSON the walkthroughs use (see encodeValue in
+// src/visualizations/values.ts): {"list": [...]}, {"tuple": [...]}, {"set": [...sorted]},
+// {"dict": [[key, value], ...]}; numbers, strings, booleans and None as themselves.
+const ENCODE = `
+import json as _j
+_simple = (int, float, str, bool, list, tuple, dict, set, type(None))
+def _enc(v):
+    if isinstance(v, list):
+        return {"list": [_enc(x) for x in v]}
+    if isinstance(v, tuple):
+        return {"tuple": [_enc(x) for x in v]}
+    if isinstance(v, set):
+        return {"set": sorted((_enc(x) for x in v), key=lambda x: _j.dumps(x, ensure_ascii=False, separators=(",", ":")))}
+    if isinstance(v, dict):
+        return {"dict": [[_enc(k), _enc(x)] for k, x in v.items()]}
+    return v
+def _vars(scope):
+    return {k: _enc(v) for k, v in scope.items() if not k.startswith("_") and isinstance(v, _simple)}
+`;
+
 // Saves the program's final global variables (simple values only) next to it.
 const DUMP = `
-import json as _j
-_simple = (int, float, str, bool, list, type(None))
+${ENCODE}
 with open("__vars.json", "w") as _f:
-    _j.dump({k: v for k, v in globals().items() if not k.startswith("_") and isinstance(v, _simple)}, _f)
+    _j.dump(_vars(globals()), _f)
 `;
 
 // For programs that call input(): feeds the typed lines and echoes them, so the output looks
@@ -79,22 +100,42 @@ function run(code: string, dumpVars = false, input?: string[]): Run {
   return { stdout: stdout ? stdout.split("\n") : [], stderr, ok: r.status === 0, vars };
 }
 
-// Records every module-level line event: the line about to run, the simple global variables
-// (copied through JSON so later changes to a list don't rewrite history) and the output so far.
+// Records every line event in main.py's own code (the main program and its functions): the
+// line about to run, the running frame's simple variables (encoded at once, so later changes
+// to a list don't rewrite history), Python's id() of each collection, every frame from the
+// main program to the running one, and the output so far. When a function returns, a
+// "return" event is recorded at the line of the caller that was waiting for it.
 const TRACER = `
-import io, json, sys
+import io, sys
+${ENCODE}
 _code = compile(open("main.py").read(), "main.py", "exec")
 _buf = io.StringIO()
-_simple = (int, float, str, bool, list, type(None))
-def _snap(g):
-    return json.loads(json.dumps({k: v for k, v in g.items() if not k.startswith("_") and isinstance(v, _simple)}))
+def _scope(f):
+    return f.f_globals if f.f_code is _code else f.f_locals
+def _ours(f):
+    return f is not None and f.f_code.co_filename == "main.py" and (f.f_code is _code or not f.f_code.co_name.startswith("<"))
+def _stack(f):
+    frames = []
+    while f is not None:
+        if _ours(f):
+            frames.append({"name": f.f_code.co_name, "vars": _vars(_scope(f))})
+        f = f.f_back
+    return frames[::-1]
+def _ids_in(scope):
+    return {k: id(v) for k, v in scope.items() if not k.startswith("_") and isinstance(v, (list, tuple, dict, set))}
+def _ids(f):
+    return _ids_in(_scope(f))
+def _record(f, line, kind):
+    _events.append({"line": line, "vars": _vars(_scope(f)), "ids": _ids(f), "stack": _stack(f), "out": _buf.getvalue(), "kind": kind})
 _events = []
 _g = {"__name__": "__main__"}
 def _trace(frame, event, arg):
-    if frame.f_code is not _code:
+    if not _ours(frame):
         return None
     if event == "line":
-        _events.append({"line": frame.f_lineno, "vars": _snap(frame.f_globals), "out": _buf.getvalue()})
+        _record(frame, frame.f_lineno, "line")
+    elif event == "return" and frame.f_code is not _code and _ours(frame.f_back):
+        _record(frame.f_back, frame.f_back.f_lineno, "return")
     return _trace
 _real = sys.stdout
 sys.stdout = _buf
@@ -104,19 +145,27 @@ try:
 finally:
     sys.settrace(None)
     sys.stdout = _real
-_events.append({"line": None, "vars": _snap(_g), "out": _buf.getvalue()})
+_events.append({"line": None, "vars": _vars(_g), "ids": _ids_in(_g), "stack": [{"name": "<module>", "vars": _vars(_g)}], "out": _buf.getvalue(), "kind": "line"})
 with open("__trace.json", "w") as _f:
-    json.dump(_events, _f)
+    _j.dump(_events, _f)
 `;
 
 // Evaluates expressions with a recorded event's variables and compares them (by repr) with
 // what the walkthrough claims.
 const EVALUATOR = `
 import ast, json
+def _dec(v):
+    if isinstance(v, dict) and len(v) == 1:
+        (tag, x), = v.items()
+        if tag == "list": return [_dec(i) for i in x]
+        if tag == "tuple": return tuple(_dec(i) for i in x)
+        if tag == "set": return {_dec(i) for i in x}
+        if tag == "dict": return {_dec(k): _dec(i) for k, i in x}
+    return v
 _results = []
 for _r in json.load(open("__eval.json")):
     try:
-        _got = eval(_r["expr"], {}, dict(_r["vars"]))
+        _got = eval(_r["expr"], {}, {k: _dec(v) for k, v in _r["vars"].items()})
         _results.append({"ok": repr(_got) == repr(ast.literal_eval(_r["expect"])), "got": repr(_got)})
     except Exception as _e:
         _results.append({"ok": False, "got": f"{type(_e).__name__}: {_e}"})
@@ -137,7 +186,7 @@ const replayed = new Set<Walkthrough>();
 function checkSteps(w: Walkthrough, where: string) {
   if (replayed.has(w)) return;
   replayed.add(w);
-  if (!replayable(w)) return; // functions and input() are checked by their final state only
+  if (!replayable(w)) return; // input(), classes and imports are checked by their final state only
   checked++;
   const traced = python(TRACER, { "main.py": w.code });
   if (traced.status !== 0) {
@@ -148,7 +197,7 @@ function checkSteps(w: Walkthrough, where: string) {
   const { problems: mismatches, evals } = matchRecording(w, events);
   problems.push(...mismatches.map((m) => `${where}: ${m}`));
   if (!evals.length) return;
-  python(EVALUATOR, { "__eval.json": JSON.stringify(evals.map((e: EvalRequest) => ({ ...e, vars: events[e.at]!.vars }))) });
+  python(EVALUATOR, { "__eval.json": JSON.stringify(evals.map((e: EvalRequest) => ({ ...e, vars: { ...events[e.at]!.stack?.[0]?.vars, ...events[e.at]!.vars } }))) });
   const results = JSON.parse(readFileSync(join(dir, "__evalout.json"), "utf8")) as { ok: boolean; got: string }[];
   results.forEach((r, i) => {
     if (!r.ok) problems.push(`${where}: walkthrough "${w.id}" ${evals[i]!.what}: the walkthrough says ${evals[i]!.expect}, Python gives ${r.got}`);
@@ -156,7 +205,6 @@ function checkSteps(w: Walkthrough, where: string) {
 }
 
 const show = (lines: string[]) => JSON.stringify(lines);
-const pyJson = (v: PyValue) => (v.type === "None" ? null : v.value);
 
 function checkWalkthrough(w: Walkthrough, where: string) {
   checkSteps(w, where);
@@ -173,8 +221,8 @@ function checkWalkthrough(w: Walkthrough, where: string) {
   }
   for (const [name, value] of Object.entries(last.vars as Variables)) {
     if (!(name in r.vars)) continue; // a local variable inside a function, gone after it returns
-    if (JSON.stringify(r.vars[name]) !== JSON.stringify(pyJson(value))) {
-      problems.push(`${where}: walkthrough "${w.id}" ends with ${name} = ${JSON.stringify(r.vars[name])}, but its last step shows ${JSON.stringify(pyJson(value))}`);
+    if (JSON.stringify(r.vars[name]) !== JSON.stringify(encodeValue(value))) {
+      problems.push(`${where}: walkthrough "${w.id}" ends with ${name} = ${JSON.stringify(r.vars[name])}, but its last step shows ${JSON.stringify(encodeValue(value))}`);
     }
   }
 }
@@ -225,6 +273,7 @@ for (const course of courses) {
   }
 }
 for (const example of examples) checkWalkthrough(example, "playground");
+for (const w of pythonVisuals) checkWalkthrough(w, "showcase");
 
 const lastLine = (text: string) => text.split("\n").at(-1) ?? "";
 for (const entry of allReferences) {

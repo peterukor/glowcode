@@ -1,11 +1,12 @@
 /**
  * Every walkthrough in the app, with where it's used. Built from the content itself (lessons,
- * playground demos, manual examples), so nothing is listed twice by hand. The developer
+ * playground demos, showcase demos, manual examples), so nothing is listed twice by hand. The developer
  * showcase and the tests read it.
  */
 import { walkthroughsIn } from "@/courses/queries";
 import { courses } from "@/courses/registry";
 import { examples } from "@/data/examples";
+import { pythonVisuals } from "@/data/pythonVisuals";
 import { allReferences } from "@/references/registry";
 import type { Walkthrough } from "@/types/trace";
 
@@ -24,6 +25,7 @@ export function walkthroughCatalog(): CatalogEntry[] {
     }
   }
   for (const w of examples) add(w, "Playground");
+  for (const w of pythonVisuals) add(w, "Showcase");
   for (const entry of allReferences) {
     for (const x of entry.examples ?? []) if (x.walkthrough) add(x.walkthrough, `Manual: ${entry.title}`);
   }
@@ -35,6 +37,7 @@ export function allWalkthroughUses(): Walkthrough[] {
   return [
     ...courses.flatMap((c) => c.chapters.flatMap((ch) => ch.lessons.flatMap(walkthroughsIn))),
     ...examples,
+    ...pythonVisuals,
     ...allReferences.flatMap((e) => (e.examples ?? []).flatMap((x) => (x.walkthrough ? [x.walkthrough] : []))),
   ];
 }
