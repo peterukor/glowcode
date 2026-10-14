@@ -664,26 +664,34 @@
   fill: color-mix(in srgb, var(--flow-false) 12%, var(--card));
   filter: drop-shadow(0 0 8px color-mix(in srgb, var(--flow-false) 45%, transparent));
 }
-.flow-answer rect {
-  stroke-width: 1.5;
-}
-.flow-answer text {
-  font: 700 11px var(--font-sans);
+.flow .flow-decision-answer {
+  font: 800 12px var(--font-sans);
   text-anchor: middle;
 }
-.flow-answer[data-tone="true"] rect {
-  fill: color-mix(in srgb, var(--flow-true) 22%, var(--card));
-  stroke: var(--flow-true);
+.flow .flow-decision-answer[data-tone="true"] {
+  fill: color-mix(in srgb, var(--flow-true) 75%, var(--foreground));
 }
-.flow-answer[data-tone="true"] text {
-  fill: color-mix(in srgb, var(--flow-true) 70%, var(--foreground));
+.flow .flow-decision-answer[data-tone="false"] {
+  fill: color-mix(in srgb, var(--flow-false) 80%, var(--foreground));
 }
-.flow-answer[data-tone="false"] rect {
-  fill: color-mix(in srgb, var(--flow-false) 18%, var(--card));
-  stroke: var(--flow-false);
+/* Yes / No pills on the loop's two ways out: neutral until that way is chosen. */
+.loopflow .flow-label[data-tone="idle"] rect {
+  fill: var(--card);
+  stroke: color-mix(in srgb, var(--muted-foreground) 45%, transparent);
 }
-.flow-answer[data-tone="false"] text {
-  fill: color-mix(in srgb, var(--flow-false) 75%, var(--foreground));
+.loopflow .flow-label[data-tone="idle"] text {
+  fill: var(--muted-foreground);
+}
+.loopflow .flow-label[data-tone="dim"] {
+  opacity: 0.35;
+}
+.loopflow .flow-label[data-tone="dim"] rect {
+  fill: var(--card);
+  stroke: color-mix(in srgb, var(--muted-foreground) 45%, transparent);
+  stroke-dasharray: 3 3;
+}
+.loopflow .flow-label[data-tone="dim"] text {
+  fill: var(--muted-foreground);
 }
 
 /* arrowheads follow their line's look */
@@ -719,12 +727,6 @@
 }
 .loopflow .flow-label[data-tone="neutral"] text {
   fill: color-mix(in srgb, var(--flow-lit) 55%, var(--foreground));
-}
-.loopflow .flow-label[data-look="idle"] {
-  opacity: 0.75;
-}
-.loopflow .flow-label[data-look="lit"] {
-  opacity: 1;
 }
 
 /* the value a loop picked, travelling along the flowchart */

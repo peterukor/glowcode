@@ -72,13 +72,13 @@ describe("WhileLoopView", () => {
     expect(screen.getByText("print(count)")).toBeTruthy();
     expect(screen.getByText("(the program ends)")).toBeTruthy();
     expect(document.querySelectorAll('[data-look="lit"]')).toHaveLength(0);
-    expect(document.querySelector(".flow-answer")).toBeNull();
+    expect(document.querySelector(".flow-decision-answer")).toBeNull();
   });
 
   it("glows the condition with its real result while checking", () => {
     render(<WhileLoopView shape={shape} trace={{ checks: 2, at: "check", result: true }} />);
     expect(screen.getByText("check 2")).toBeTruthy();
-    expect(document.querySelector(".flow-answer")!.textContent).toBe("✓ True");
+    expect(document.querySelector(".flow-decision-answer")!.textContent).toBe("✓ True");
     expect(node("decision")).toBe("true");
     expect(edge("back")).toBe("lit"); // the second check comes round the loop
   });
@@ -94,7 +94,7 @@ describe("WhileLoopView", () => {
     expect(node("after")).toBe("lit");
     expect(edge("exit")).toBe("lit");
     expect(edge("yes")).toBe("dim");
-    expect(document.querySelector(".flow-answer")!.textContent).toBe("✗ False");
+    expect(document.querySelector(".flow-decision-answer")!.textContent).toBe("✗ False");
   });
 });
 

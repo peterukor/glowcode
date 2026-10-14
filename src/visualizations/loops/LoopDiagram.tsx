@@ -21,7 +21,31 @@ export type LoopLooks = {
 export type TravellingChip = { key: string; text: string; from: Point; to: Point };
 
 const EDGE_ORDER: Record<Look, number> = { dim: 0, idle: 1, done: 1, false: 2, true: 3, lit: 4 };
-const LABEL_TONE: Partial<Record<LoopEdgeId, "true" | "false" | "neutral">> = { yes: "true", exit: "false", back: "neutral" };
+/**
+ * The Yes / No labels only take a colour when that way out was chosen: the label of the way
+ * Python went is coloured, the other one fades. Until then both stay neutral, so a label is
+ * never mistaken for an answer.
+ */
+function labelTone(id: LoopEdgeId, look: Look, answer?: { positive: boolean }): "true" | "false" | "idle" | "dim" | "neutral" {
+  if (id === "yes") {
+    if (answer?.positive === false || look === "dim") return "dim";
+    return answer?.positive || look === "lit" || look === "done" ? "true" : "idle";
+  }
+  if (id === "exit") {
+    if (answer?.positive) return "dim";
+    return answer?.positive === false || look === "lit" ? "false" : "idle";
+  }
+  return "neutral";
+}
+
+/** The lines inside the decision diamond. */
+function decisionLines(caption: string | undefined, question: string, answer?: { text: string; positive: boolean }) {
+  return [
+    ...(caption ? [{ kind: "caption", text: caption }] : []),
+    { kind: "question", text: question },
+    ...(answer ? [{ kind: "answer", text: `${answer.positive ? "✓" : "✗"} ${answer.text}` }] : []),
+  ];
+}
 
 function Rect({ box, r = 10, className }: { box: Box; r?: number; className: string }) {
   return <rect x={box.x} y={box.y} width={box.w} height={box.h} rx={r} className={className} />;
@@ -123,23 +147,19 @@ export function LoopDiagram({
 
         <g className="flow-decision loop-node" data-node="decision" data-look={decLook} data-current={looks.current === "decision" || undefined}>
           <path d={diamond} className="flow-decision-shape" />
-          {questionCaption && (
-            <text x={dec.x + dec.w / 2} y={dec.y + dec.h / 2 - 12} className="flow-caption flow-decision-caption">
-              {questionCaption}
+          {/* Inside the diamond, top to bottom: which check this is, the question, its answer. */}
+          {decisionLines(questionCaption, question, answer).map((line, i, all) => (
+            <text
+              key={line.kind}
+              x={dec.x + dec.w / 2}
+              y={dec.y + dec.h / 2 + 1 + (i - (all.length - 1) / 2) * 17}
+              className={line.kind === "question" ? "flow-code flow-decision-text" : line.kind === "answer" ? "flow-decision-answer" : "flow-caption flow-decision-caption"}
+              data-tone={line.kind === "answer" ? (answer!.positive ? "true" : "false") : undefined}
+            >
+              {line.text}
             </text>
-          )}
-          <text x={dec.x + dec.w / 2} y={dec.y + dec.h / 2 + (questionCaption ? 8 : 1)} className="flow-code flow-decision-text">
-            {question}
-          </text>
+          ))}
         </g>
-        {answer && (
-          <g className="flow-answer" data-tone={answer.positive ? "true" : "false"}>
-            <rect x={dec.x + dec.w - 18} y={dec.y + 2} width={answer.text.length * 7 + 30} height={22} rx={11} />
-            <text x={dec.x + dec.w - 18 + (answer.text.length * 7 + 30) / 2} y={dec.y + 14}>
-              {answer.positive ? "✓" : "✗"} {answer.text}
-            </text>
-          </g>
-        )}
 
         {layout.target && target && (
           <g className="flow-block loop-node loop-target" data-node="target" data-look={looks.nodes.target ?? "idle"} data-current={looks.current === "target" || undefined}>
@@ -163,7 +183,7 @@ export function LoopDiagram({
           const look = looks.edges[e.id] ?? "idle";
           const w = e.label.text.length * 6.6 + 18;
           return (
-            <g key={`l-${e.id}`} className="flow-label" data-tone={LABEL_TONE[e.id] ?? "neutral"} data-look={look}>
+            <g key={`l-${e.id}`} className="flow-label" data-tone={labelTone(e.id, look, answer)} data-look={look}>
               <rect x={e.label.x - w / 2} y={e.label.y - 10} width={w} height={20} rx={10} />
               <text x={e.label.x} y={e.label.y + 1}>
                 {e.label.text}

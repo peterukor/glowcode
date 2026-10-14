@@ -54,6 +54,7 @@ const stripState = (i: number) => strip()[i]!.getAttribute("data-state");
 const stripValues = () => strip().filter((c) => !c.hasAttribute("aria-hidden")).map((c) => c.querySelector(".strip-value")!.textContent);
 const node = (id: string) => document.querySelector(`[data-node="${id}"]`)!.getAttribute("data-look");
 const edge = (id: string) => document.querySelector(`[data-edge="${id}"]`)!.getAttribute("data-look");
+const labelTone = (id: string) => document.querySelector(`[data-edge="${id}"]`) && [...document.querySelectorAll(".flow-label")].find((l) => l.textContent === (id === "yes" ? "Yes" : "No"))!.getAttribute("data-tone");
 const text = (sel: string) => [...document.querySelectorAll(sel)].map((e) => e.textContent);
 
 describe("ForLoopView", () => {
@@ -63,7 +64,7 @@ describe("ForLoopView", () => {
     render(<ForLoopView shape={shape} vars={{}} />);
     for (const code of ["Next item available?", "print(number)", 'print("done")']) expect(text(".flow-code")).toContain(code);
     expect(document.querySelectorAll('[data-look="lit"]')).toHaveLength(0);
-    expect(document.querySelector(".flow-answer")).toBeNull();
+    expect(document.querySelector(".flow-decision-answer")).toBeNull();
     expect(document.querySelector(".loop-chip")).toBeNull();
   });
 
@@ -71,10 +72,13 @@ describe("ForLoopView", () => {
     render(<ForLoopView shape={shape} trace={{ at: "next", index: 1 }} vars={{ number: py.int(10) }} />);
     expect([stripState(0), stripState(1), stripState(2)]).toEqual(["visited", "raised", "idle"]);
     expect(node("decision")).toBe("true");
-    expect(document.querySelector(".flow-answer")!.textContent).toBe("✓ Yes");
+    expect(document.querySelector(".flow-decision-answer")!.textContent).toBe("✓ Yes");
     expect(document.querySelector(".loop-chip")!.textContent).toBe("20");
     expect(edge("back")).toBe("lit"); // came back round for another lap
     expect(edge("feed")).toBe("lit");
+    // Only the way Python goes is coloured; the other way out fades.
+    expect(labelTone("yes")).toBe("true");
+    expect(labelTone("exit")).toBe("dim");
   });
 
   it("assign: the value travels into the loop variable; the item stays in the list", () => {
@@ -96,22 +100,29 @@ describe("ForLoopView", () => {
   it("exit: every item is done, the answer is No and the way out glows", () => {
     render(<ForLoopView shape={shape} trace={{ at: "exit", index: 3 }} vars={{ number: py.int(30) }} />);
     expect([stripState(0), stripState(1), stripState(2)]).toEqual(["visited", "visited", "visited"]);
-    expect(document.querySelector(".flow-answer")!.textContent).toBe("✗ No");
+    expect(document.querySelector(".flow-decision-answer")!.textContent).toBe("✗ No");
     expect(node("decision")).toBe("false");
     expect(edge("exit")).toBe("lit");
     expect(node("after")).toBe("lit");
     expect(edge("yes")).toBe("dim");
+    expect(labelTone("exit")).toBe("false");
+    expect(labelTone("yes")).toBe("dim");
+  });
+
+  it("before the loop, neither way out looks like an answer", () => {
+    render(<ForLoopView shape={shape} vars={{}} />);
+    expect([labelTone("yes"), labelTone("exit")]).toEqual(["idle", "idle"]);
   });
 
   it("a generator's values stay unknown until produced", () => {
     const gen: ForLoopShape = { ...shape, kind: "generator", iterable: "countdown(2)", items: [2, 1] };
     render(<ForLoopView shape={gen} trace={{ at: "next", index: 0 }} vars={{}} />);
     expect(stripValues()).toEqual(["?", "?"]);
-    expect(document.querySelector(".flow-answer")).toBeNull();
+    expect(document.querySelector(".flow-decision-answer")).toBeNull();
     cleanup();
     render(<ForLoopView shape={gen} trace={{ at: "next", index: 2 }} vars={{ x: py.int(1) }} />);
     expect(screen.getByText(/asking the generator/i)).toBeTruthy();
-    expect(document.querySelector(".flow-answer")).toBeNull();
+    expect(document.querySelector(".flow-decision-answer")).toBeNull();
   });
 
   it("a long iterable shows five items, with … only where items are hidden", () => {
