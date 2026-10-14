@@ -39,19 +39,24 @@ export function CodeExample({ block, onActivity }: { block: CodeBlock; onActivit
     <div id={wt ? `activity-${walkthroughActivityId(wt.id)}` : undefined} className="code-example my-7">
       {open && wt ? (
         <section className="breakout walkthrough-inline animate-pop rounded-[2rem] border-2 border-primary/30 bg-muted/40 p-3 sm:p-4" aria-labelledby={`${wt.id}-title`}>
-          <div className="mb-3 flex items-center gap-3 px-1">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold uppercase tracking-wide text-primary">Code walkthrough</p>
-              <h3 id={`${wt.id}-title`} ref={heading} tabIndex={-1} className="truncate text-lg font-extrabold outline-none">
-                {wt.title}
-              </h3>
-            </div>
-            <span className="hidden text-xs text-muted-foreground sm:inline">← → keys step through</span>
-            <button type="button" className="btn-ghost !px-4 !py-2" onClick={() => setOpen(false)}>
-              <X className="h-4 w-4" aria-hidden /> Close
-            </button>
-          </div>
-          <WalkthroughPlayer walkthrough={wt} />
+          <WalkthroughPlayer
+            walkthrough={wt}
+            // Inside the player, so ← → work as soon as it opens (focus starts on the title).
+            header={
+              <div className="mb-3 flex items-center gap-3 px-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold uppercase tracking-wide text-primary">Code walkthrough</p>
+                  <h3 id={`${wt.id}-title`} ref={heading} tabIndex={-1} className="truncate text-lg font-extrabold outline-none">
+                    {wt.title}
+                  </h3>
+                </div>
+                <span className="hidden text-xs text-muted-foreground sm:inline">← → keys step through</span>
+                <button type="button" className="btn-ghost !px-4 !py-2" onClick={() => setOpen(false)}>
+                  <X className="h-4 w-4" aria-hidden /> Close
+                </button>
+              </div>
+            }
+          />
         </section>
       ) : (
         <figure className="overflow-hidden rounded-3xl border-2 bg-code-bg shadow-soft">

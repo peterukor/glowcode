@@ -313,4 +313,17 @@ describe("CodeExample", () => {
     expect(screen.queryByRole("heading", { name: "Creating a variable" })).toBeNull();
     expect(document.activeElement).toBe(button(/Walk through code/));
   });
+
+  it("steps with the arrow keys straight after opening, while focus is on the title", () => {
+    // QA regression: the title sat outside the player, so → did nothing until the student
+    // tabbed into the controls, even though the header says "← → keys step through".
+    render(<CodeExample block={{ ...block, walkthrough }} onActivity={() => {}} />);
+    fireEvent.click(button(/Walk through code/));
+    const heading = document.getElementById("py-test-title")!;
+    expect(document.activeElement).toBe(heading);
+    fireEvent.keyDown(heading, { key: "ArrowRight" });
+    shown("Print it.");
+    fireEvent.keyDown(heading, { key: "ArrowLeft" });
+    shown("age refers to 13.");
+  });
 });
