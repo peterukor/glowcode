@@ -83,6 +83,11 @@ export function findPythonReferences(code: string): CodeReference[] {
     if (!kinds.has(name)) kinds.set(name, new Set());
     kinds.get(name)!.add(kind);
   };
+  /** A name the snippet binds in a way we can't type (import, parameter, loop variable…). */
+  const bindUnknown = (name: string) => {
+    bound.add(name);
+    addKind(name, "?");
+  };
   let starImport = false;
   const assignments: { name: string; rhs: Token[] }[] = [];
 
@@ -91,24 +96,26 @@ export function findPythonReferences(code: string): CodeReference[] {
     const has = (word: string) => sig.some((t) => t.kind === "name" && t.text === word);
     if (has("import")) {
       if (sig.some((t) => t.text === "*")) starImport = true;
-      names.forEach((t) => (bound.add(t.text), addKind(t.text, "?")));
+      names.forEach((t) => bindUnknown(t.text));
       continue;
     }
     if (has("def") || has("class") || has("lambda") || has("global") || has("nonlocal")) {
       // Function names, parameters, class names: all bound, types unknown.
       const from = sig.findIndex((t) => ["def", "class", "lambda", "global", "nonlocal"].includes(t.text));
       const to = sig[from]!.text === "lambda" ? sig.findIndex((t, i) => i > from && t.text === ":") : sig.length;
-      sig.slice(from + 1, to < 0 ? sig.length : to).forEach((t) => t.kind === "name" && (bound.add(t.text), addKind(t.text, "?")));
+      sig.slice(from + 1, to < 0 ? sig.length : to).forEach((t) => {
+        if (t.kind === "name") bindUnknown(t.text);
+      });
     }
     sig.forEach((t, i) => {
       if (t.text === "for") {
         // Loop variables, in statements and comprehensions: everything up to `in`.
         for (let j = i + 1; j < sig.length && sig[j]!.text !== "in"; j++) {
-          if (sig[j]!.kind === "name") (bound.add(sig[j]!.text), addKind(sig[j]!.text, "?"));
+          if (sig[j]!.kind === "name") bindUnknown(sig[j]!.text);
         }
       }
-      if (t.text === "as" && sig[i + 1]?.kind === "name") (bound.add(sig[i + 1]!.text), addKind(sig[i + 1]!.text, "?"));
-      if (t.text === ":=" && sig[i - 1]?.kind === "name") (bound.add(sig[i - 1]!.text), addKind(sig[i - 1]!.text, "?"));
+      if (t.text === "as" && sig[i + 1]?.kind === "name") bindUnknown(sig[i + 1]!.text);
+      if (t.text === ":=" && sig[i - 1]?.kind === "name") bindUnknown(sig[i - 1]!.text);
     });
 
     // Assignment targets: names before the last top-level `=` (or `+=` ...), not after a dot.
