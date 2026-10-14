@@ -176,7 +176,7 @@ function Index() {
           <h2 className="text-4xl font-extrabold md:text-5xl">Every concept, <span className="text-brand">visible.</span></h2>
           <div className="mt-10 grid grid-flow-dense gap-6 md:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
-              <div key={f.title} className={`rounded-3xl border-2 border-t-8 bg-card p-6 shadow-soft ${f.accent} ${f.span ?? ""}`}>
+              <div key={f.title} className={`min-w-0 rounded-3xl border-2 border-t-8 bg-card p-6 shadow-soft ${f.accent} ${f.span ?? ""}`}>
                 <h3 className="text-xl font-bold">{f.title}</h3>
                 <p className="text-sm text-muted-foreground">{f.blurb}</p>
                 <div className="mt-4 flex min-h-32 items-center justify-center overflow-hidden">{f.preview}</div>
