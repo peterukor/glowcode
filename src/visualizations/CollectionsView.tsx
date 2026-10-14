@@ -1,35 +1,103 @@
-import type { ReactNode } from "react";
+import { useId, type CSSProperties, type ReactNode } from "react";
+import { useOverflows } from "@/hooks/useOverflows";
 import { isCollection, type PyItem, type PyValue } from "@/types/python";
 import type { TraceStep } from "@/types/trace";
-import { itemFocus, type WindowFocus } from "./collectionWindow";
-import { SegmentedSequence, type CellState } from "./SegmentedSequence";
-import { pyItem } from "./values";
-
-type Shown = { names: string[]; value: PyValue };
+import { collectionWindow, itemFocus, type WindowFocus } from "./collectionWindow";
+import { arrowHead, CHAR_W } from "./flow/geometry";
+import { SequenceStrip, STRIP, stripSize, type StripTone } from "./loops/SequenceStrip";
+import type { CellState } from "./SegmentedSequence";
+import { formatValue, pyItem } from "./values";
 
 /**
- * Every list, tuple, dict, set and string the program has at this event, each drawn once.
- * Names that refer to the same object (same `id`) are listed together on one object, so
- * `b = a` reads as two names and one list; a copy is a separate object. What the event does
- * (an index, a slice, a change, a membership test) is marked on the right object.
+ * Every list, tuple, dict, set (and indexed string) the program has at this event, drawn as
+ * one SVG: variable names on the left as tags, each with an arrow to the object it refers
+ * to. Names that refer to the same object (same `id`) point at one shared object, so
+ * `b = a` literally shows two arrows into one list, while a copy is a second object. What
+ * the event does (an index, a slice, a change, a membership test) glows on that object.
  */
 export function CollectionsView({ step, previous, strings }: { step: TraceStep; previous?: TraceStep; strings?: Set<string> }) {
-  const shown = groupByObject(step, strings);
-  if (!shown.length) return <p className="text-sm text-muted-foreground">No lists, strings or other collections yet.</p>;
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
+  const [scrollRef, overflows] = useOverflows<HTMLDivElement>();
+  const groups = groupByObject(step, strings);
+  if (!groups.length) return <p className="text-sm text-muted-foreground">No lists, strings or other collections yet.</p>;
+
+  const nameW = Math.max(...groups.flatMap((g) => g.names.map(pillW)));
+  const objX = PAD + nameW + ARROW_GAP;
+  const blocks = groups.map((g, i) => describeObject(g, step, previous, `${uid}o${i}`));
+
+  let y = PAD;
+  const placed = blocks.map((b) => {
+    const at = y;
+    y += b.h + GAP;
+    return { ...b, y: at };
+  });
+  const height = y - GAP + PAD;
+  const width = objX + Math.max(...blocks.map((b) => b.w)) + PAD;
+
   return (
-    <div className="flex flex-col gap-6">
-      {shown.map(({ names, value }) => (
-        <ObjectView key={names.join(",")} names={names} value={value} step={step} previous={previous} />
-      ))}
+    <div ref={scrollRef} className="flow objects overflow-x-auto" tabIndex={overflows ? 0 : undefined} role={overflows ? "region" : undefined} aria-label={overflows ? "Objects, scrolls sideways" : undefined}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        width={width}
+        className="flow-svg mx-auto block h-auto max-w-full"
+        style={{ "--flow-w": `${width}px`, minWidth: `min(${width}px, 17rem)` } as CSSProperties}
+        role="img"
+        aria-label={placed.map((b) => b.summary).join(" ")}
+      >
+        {placed.map((b, bi) => {
+          const anchorY = b.y + b.anchor;
+          const names = groups[bi]!.names;
+          const firstY = anchorY - ((names.length - 1) * NAME_STEP) / 2;
+          return (
+            <g key={names.join(",")} className="object" data-kind={b.kind}>
+              {names.map((name, ni) => {
+                const cy = firstY + ni * NAME_STEP;
+                const w = pillW(name);
+                const from = { x: PAD + w, y: cy };
+                const to = { x: objX + b.arrowInset - 4, y: anchorY };
+                const mid = (from.x + to.x) / 2;
+                const look = b.touched ? "lit" : "idle";
+                return (
+                  <g key={name} className="binding-link" data-look={look}>
+                    <path d={`M${from.x} ${from.y}C${mid} ${from.y} ${mid} ${to.y} ${to.x} ${to.y}`} className="binding-line" />
+                    <path d={arrowHead([{ x: to.x - 10, y: to.y }, to], 6)} className="binding-arrow" />
+                    <rect x={PAD} y={cy - 14} width={w} height={28} rx={14} className="name-pill" />
+                    <text x={PAD + w / 2} y={cy + 1} className="name-pill-text">
+                      {name}
+                    </text>
+                  </g>
+                );
+              })}
+              <text x={objX + b.contentX} y={b.y + 9} className="object-tag">
+                {b.tag}
+              </text>
+              <g transform={`translate(${objX} ${b.y + TAG_H})`}>{b.body}</g>
+              {b.extras.map((extra, ei) => (
+                <g key={`${b.key}-${ei}`} transform={`translate(${objX + b.contentX} ${b.y + TAG_H + b.bodyH + 10 + ei * EXTRA_H})`}>
+                  {extra}
+                </g>
+              ))}
+            </g>
+          );
+        })}
+      </svg>
+      <p className="sr-only">{placed.map((b) => b.summary).join(" ")}</p>
     </div>
   );
 }
 
-/**
- * Strings are drawn here only when `strings` names them (the walkthrough indexes or slices
- * them); other strings stay in the Variables view, so a list demo isn't crowded by every
- * text value. Without `strings`, every string is drawn.
- */
+const PAD = 10;
+const ARROW_GAP = 42;
+const NAME_STEP = 36;
+const GAP = 26;
+const TAG_H = 20;
+const EXTRA_H = 34;
+const SANS_W = 7.3; // 12px sans, bold
+const pillW = (name: string) => name.length * CHAR_W + 26;
+
+type Shown = { names: string[]; value: PyValue };
+
+/** Group names by the object they refer to. Strings are drawn only when `strings` names them. */
 function groupByObject(step: TraceStep, strings?: Set<string>): Shown[] {
   const groups: Shown[] = [];
   const byId = new Map<string, Shown>();
@@ -48,30 +116,80 @@ function groupByObject(step: TraceStep, strings?: Set<string>): Shown[] {
   return groups;
 }
 
-function Names({ names, value }: { names: string[]; value: PyValue }) {
+type Block = {
+  key: string;
+  kind: string;
+  tag: string;
+  body: ReactNode;
+  bodyW: number;
+  bodyH: number;
+  /** Where name arrows point, from the block's top. */
+  anchor: number;
+  /** How far right of the object's x the arrows end (a list's container starts after its "…" space). */
+  arrowInset: number;
+  /** Where the object's own box starts (after a list's "…" space). */
+  contentX: number;
+  extras: ReactNode[];
+  w: number;
+  h: number;
+  /** Does this event do something to this object? Its arrows glow. */
+  touched: boolean;
+  summary: string;
+};
+
+/** A pill under an object: what left it, what came back, what a test answered. */
+function Chip({ text, value, tone, arrow }: { text: string; value?: string; tone: "removed" | "returned" | "true" | "false" | "note"; arrow?: string }) {
+  const w = chipW(text, value);
   return (
-    <span className="flex flex-wrap items-center gap-1.5">
-      {names.map((n) => (
-        <span key={n} className="binding-name rounded-lg border-2 border-foreground/60 bg-background px-2 py-0.5 font-mono text-xs font-bold">
-          {n}
-        </span>
-      ))}
-      <span className="text-primary" aria-hidden>
-        ⟶
-      </span>
-      <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-        {names.length > 1 ? `the same ${value.type} (${names.length} names, 1 object)` : value.type}
-      </span>
-    </span>
+    <g className="object-chip" data-tone={tone}>
+      <rect x={0} y={0} width={w} height={26} rx={13} className="object-chip-box" />
+      <text x={12} y={14} className="object-chip-text">
+        {arrow && <tspan className="object-chip-arrow">{arrow} </tspan>}
+        {text}
+        {value !== undefined && <tspan className="object-chip-value"> {value}</tspan>}
+      </text>
+    </g>
   );
 }
+const chipW = (text: string, value?: string, arrow?: string) => (text.length + (arrow ? 2 : 0)) * SANS_W + (value ? (value.length + 1) * CHAR_W : 0) + 26;
 
-function ObjectView({ names, value, step, previous }: { names: string[]; value: PyValue; step: TraceStep; previous?: TraceStep }) {
+function describeObject(group: Shown, step: TraceStep, previous: TraceStep | undefined, id: string): Block {
+  const { names, value } = group;
   const mine = (name: string | undefined) => !!name && names.includes(name);
   const mutation = mine(step.mutation?.name) ? step.mutation : undefined;
-  const removed = mutation && (mutation.kind === "pop" || mutation.kind === "remove" || mutation.kind === "discard" || mutation.kind === "delete-key");
-  const label = <Names names={names} value={value} />;
-  let body: ReactNode = null;
+  const removing = mutation && (mutation.kind === "pop" || mutation.kind === "remove" || mutation.kind === "discard" || mutation.kind === "delete-key");
+  const typeName = value.type === "str" ? "string" : value.type;
+  const tag = names.length > 1 ? `the same ${typeName}: ${names.length} names, 1 object` : value.type === "tuple" ? "tuple · can't be changed" : value.type === "str" ? "str · can't be changed" : typeName;
+  const extras: ReactNode[] = [];
+  const extraW: number[] = [];
+  const addExtra = (node: ReactNode, w: number) => {
+    extras.push(node);
+    extraW.push(w);
+  };
+  // Just created or rebound: its arrow glows too.
+  let touched = !!mutation || names.some((n) => previous && (!previous.vars[n] || formatValue(previous.vars[n]!) !== formatValue(value)));
+  let arrowInset = 0;
+  let body: ReactNode;
+  let bodyW: number;
+  let bodyH: number;
+  let anchor: number;
+  const summary: string[] = [`${names.join(" and ")} ${names.length > 1 ? "refer to one" : "refers to a"} ${typeName}.`];
+
+  if (removing) {
+    const gone = mutation.kind === "delete-key" ? pyItem(mutation.key ?? null) : pyItem(mutation.removed ?? mutation.value ?? null);
+    const text = `left the ${value.type}:`;
+    addExtra(<Chip text={text} value={gone} tone="removed" arrow="↗" />, chipW(text, gone, "↗"));
+    summary.push(`${gone} left the ${value.type}.`);
+  }
+  // A method that hands back a value (pop) shows it separately, once it is stored.
+  const call = step.call;
+  if (call?.phase === "assign" && call.receiver && mine(call.receiver) && call.returns !== undefined && call.returns !== "None") {
+    const text = `${call.name}() returned`;
+    const value2 = `${call.returns}${call.assignTo ? ` → ${call.assignTo}` : ""}`;
+    addExtra(<Chip text={text} value={value2} tone="returned" />, chipW(text, value2));
+    summary.push(`${call.name}() returned ${call.returns}.`);
+    touched = true;
+  }
 
   if (value.type === "list" || value.type === "tuple" || value.type === "str") {
     const items: PyItem[] = value.type === "str" ? [...value.value] : value.value;
@@ -79,182 +197,167 @@ function ObjectView({ names, value, step, previous }: { names: string[]; value: 
     const states: Record<number, CellState> = {};
     const notes: Record<number, string> = {};
     let focus: WindowFocus | undefined;
-    let showNegative = false;
-    let slice: { start: number; stop: number } | undefined;
-
+    let negative = false;
     if (mine(step.element?.name) && step.element!.index !== undefined) {
       const index = step.element!.index;
-      showNegative = index < 0;
+      negative = index < 0;
       focus = itemFocus(n, index);
       if (focus) states[focus.lo] = "active";
+      touched = true;
+      summary.push(`Index ${index} is used.`);
     }
-    let sliceCaption: string | undefined;
     if (mine(step.slice?.name)) {
       const { start, stop } = step.slice!;
-      slice = { start, stop };
       for (let i = start; i < Math.min(stop, n); i++) states[i] = "selected";
-      // Short notes fit under one cell; the caption says what they mean.
       notes[start] = "start";
       if (stop < n) notes[stop] = "stop";
       focus = { lo: start, hi: Math.min(stop, n - 1) };
-      sliceCaption = `${names[0]}[${start}:${stop}]: from index ${start} (start: included) up to index ${stop} (stop: left out)${stop >= n ? ", which is past the end" : ""}`;
+      touched = true;
+      const text = `[${start}:${stop}]: start kept, stop left out`;
+      addExtra(<Chip text={text} tone="note" />, chipW(text));
+      summary.push(`The slice ${start} to ${stop} selects indexes ${start} to ${Math.min(stop, n) - 1}.`);
     }
-    if (mutation && mutation.index !== undefined && !removed) {
+    if (mutation && mutation.index !== undefined && !removing) {
       states[mutation.index] = mutation.kind === "set" ? "changed" : "added";
       notes[mutation.index] = mutation.kind === "set" && mutation.removed !== undefined ? `was ${pyItem(mutation.removed)}` : "new";
       focus = { lo: mutation.index, hi: mutation.index };
     }
-    if (removed && mutation.index !== undefined) focus = itemFocus(n, Math.min(mutation.index, n - 1));
-
+    if (removing && mutation.index !== undefined) focus = itemFocus(n, Math.min(mutation.index, n - 1));
+    const hasNotes = Object.keys(notes).length > 0;
+    const size = stripSize(items, value.type === "str", { negative, notes: hasNotes });
+    // The strip keeps room for "…" on its left; the arrow reaches the container unless items are hidden there.
+    arrowInset = collectionWindow(n, focus).hiddenBefore ? 0 : STRIP.more;
     body = (
-      <SegmentedSequence
-        label={label}
-        items={items}
-        strings={value.type === "str"}
-        tone={value.type}
-        states={states}
-        notes={notes}
-        focus={focus}
-        slice={slice}
-        showNegative={showNegative}
-        caption={
-          sliceCaption ?? (value.type === "tuple" ? "tuple: ordered, and can't be changed" : value.type === "str" ? "str: characters in order; can't be changed" : undefined)
-        }
-      />
+      <g>
+        <SequenceStrip
+          id={id}
+          items={items}
+          strings={value.type === "str"}
+          states={states}
+          focus={focus}
+          tone={value.type as StripTone}
+          negative={negative}
+          notes={hasNotes ? notes : undefined}
+        />
+      </g>
     );
+    bodyW = size.w;
+    bodyH = size.h;
+    anchor = TAG_H + STRIP.top + STRIP.cellH / 2;
   } else if (value.type === "dict") {
-    body = <DictView label={label} entries={value.value} activeKey={mine(step.element?.name) ? step.element!.key : undefined} mutation={mutation} />;
-  } else if (value.type === "set") {
+    const activeKey = mine(step.element?.name) ? step.element!.key : undefined;
+    if (activeKey !== undefined) {
+      touched = true;
+      summary.push(`The key ${pyItem(activeKey)} is looked up.`);
+    }
+    const d = dictBody(value.value, activeKey, mutation);
+    body = d.node;
+    bodyW = d.w;
+    bodyH = d.h;
+    anchor = TAG_H + Math.min(d.h / 2, 22);
+  } else {
+    // set
+    const items = value.type === "set" ? value.value : [];
+    const membership = mine(step.membership?.name) ? step.membership : undefined;
     const before = names.map((n) => previous?.vars[n]).find((v) => v?.type === "set");
     const adding = mutation?.kind === "add" ? mutation.value : undefined;
     const already = adding !== undefined && before?.type === "set" && before.value.includes(adding);
-    body = (
-      <SetView
-        label={label}
-        name={names[0]}
-        items={value.value}
-        membership={mine(step.membership?.name) ? step.membership : undefined}
-        added={already ? undefined : adding}
-        already={already ? adding : undefined}
-      />
-    );
+    const s = setBody(items, membership, already ? undefined : adding, already ? adding : undefined);
+    body = s.node;
+    bodyW = s.w;
+    bodyH = s.h;
+    anchor = TAG_H + s.h / 2;
+    if (membership) {
+      touched = true;
+      const text = `${pyItem(membership.value)} in ${names[0]}`;
+      const ans = membership.result ? "True" : "False";
+      addExtra(<Chip text={text} value={ans} tone={membership.result ? "true" : "false"} />, chipW(text, ans));
+      summary.push(`${text} is ${ans}.`);
+    }
+    if (adding !== undefined) {
+      const text = already ? `${pyItem(adding)} was already there: nothing changes` : `${pyItem(adding)} is new, so it joins the set`;
+      addExtra(<Chip text={text} tone="note" />, chipW(text));
+    }
+    const text = "no positions, no guaranteed order";
+    if (!membership && adding === undefined) addExtra(<Chip text={text} tone="note" />, chipW(text));
   }
 
-  // A method that hands back a value (pop) shows it separately, once it is stored.
-  const call = step.call;
-  const handedBack = call?.phase === "assign" && call.receiver && mine(call.receiver) && call.returns !== undefined && call.returns !== "None" ? call : undefined;
-  return (
-    <div className="flex min-w-0 flex-col items-start gap-1">
-      {body}
-      {removed && mutation && (
-        <p className="removed-chip mt-1 inline-flex items-center gap-2 rounded-full border-2 border-dashed border-coral/60 bg-coral/8 px-3 py-1 text-xs font-bold">
-          <span aria-hidden>↗</span> left the {value.type}:
-          <span className="font-mono text-sm">
-            {mutation.kind === "delete-key" ? pyItem(mutation.key ?? null) : pyItem(mutation.removed ?? mutation.value ?? null)}
-          </span>
-        </p>
-      )}
-      {handedBack && (
-        <p className="returned-chip mt-1 inline-flex items-center gap-2 rounded-full border-2 border-dashed border-primary/60 px-3 py-1 text-xs font-bold">
-          {handedBack.name}() returned <span className="font-mono text-sm">{handedBack.returns}</span>
-          {handedBack.assignTo && <span>→ {handedBack.assignTo}</span>}
-        </p>
-      )}
-    </div>
-  );
+  const h = TAG_H + bodyH + (extras.length ? 10 + extras.length * EXTRA_H - 8 : 0);
+  const contentX = value.type === "list" || value.type === "tuple" || value.type === "str" ? STRIP.more : 0;
+  const w = Math.max(bodyW, contentX + tag.length * 6.4, ...extraW.map((x) => contentX + x));
+  return { key: id, kind: value.type, tag, body, bodyW, bodyH, anchor, arrowInset, contentX, extras, w, h, touched, summary: summary.join(" ") };
 }
 
-/** A dict as key → value rows. The key being used and its value glow together. */
-export function DictView({
-  label,
-  entries,
-  activeKey,
-  mutation,
-}: {
-  label?: ReactNode;
-  entries: [PyItem, PyItem][];
-  activeKey?: PyItem;
-  mutation?: TraceStep["mutation"];
-}) {
-  return (
-    <div className="dict flex flex-col gap-1.5">
-      {label && <div className="seq-label">{label}</div>}
-      <table className="dict-table">
-        <caption className="sr-only">Keys and their values</caption>
-        <tbody>
-          {entries.map(([k, v]) => {
-            const changed = mutation?.kind === "set-key" && mutation.key === k;
-            const state = changed ? (mutation!.removed === undefined ? "added" : "changed") : activeKey !== undefined && activeKey === k ? "active" : "idle";
-            return (
-              <tr key={String(k)} data-state={state}>
-                <th scope="row" className="dict-key">
-                  {pyItem(k)}
-                </th>
-                <td className="dict-arrow" aria-hidden>
-                  →
-                </td>
-                <td className="dict-value">
-                  {pyItem(v)}
-                  {changed && mutation!.removed !== undefined && <span className="seq-note static"> was {pyItem(mutation!.removed)}</span>}
-                  {state !== "idle" && <span className="sr-only">, {state === "active" ? "looked up" : state}</span>}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      {!entries.length && <p className="seq-empty">empty dict</p>}
-    </div>
+const ROW_H = 34;
+
+function dictBody(entries: [PyItem, PyItem][], activeKey: PyItem | undefined, mutation: TraceStep["mutation"]) {
+  const keyW = Math.max(56, ...entries.map(([k]) => pyItem(k).length * CHAR_W + 24));
+  const valW = Math.max(48, ...entries.map(([, v]) => pyItem(v).length * CHAR_W + 24)) + 60;
+  const w = keyW + 34 + valW;
+  const h = Math.max(1, entries.length) * ROW_H + 12;
+  const node = (
+    <g className="dict-svg">
+      <rect x={0} y={0} width={w} height={h} rx={12} className="dict-svg-box" />
+      {!entries.length && (
+        <text x={w / 2} y={h / 2} className="strip-index">
+          empty dict
+        </text>
+      )}
+      {entries.map(([k, v], i) => {
+        const changed = mutation?.kind === "set-key" && mutation.key === k;
+        const state = changed ? (mutation!.removed === undefined ? "added" : "changed") : activeKey !== undefined && activeKey === k ? "active" : "idle";
+        const y = 6 + i * ROW_H;
+        return (
+          <g key={String(k)} className="dict-row" data-state={state}>
+            <rect x={5} y={y + 2} width={w - 10} height={ROW_H - 4} rx={9} className="dict-row-box" />
+            <text x={18} y={y + ROW_H / 2 + 1} className="dict-key">
+              {pyItem(k)}
+            </text>
+            <text x={keyW + 17} y={y + ROW_H / 2 + 1} className="dict-arrow">
+              →
+            </text>
+            <text x={keyW + 40} y={y + ROW_H / 2 + 1} className="dict-value">
+              {pyItem(v)}
+              {changed && mutation!.removed !== undefined && <tspan className="dict-was"> was {pyItem(mutation!.removed)}</tspan>}
+              {changed && mutation!.removed === undefined && <tspan className="dict-was"> new</tspan>}
+            </text>
+          </g>
+        );
+      })}
+    </g>
   );
+  return { node, w, h };
 }
 
-/** A set as a loose group of unique values: no positions, no guaranteed order. */
-export function SetView({
-  label,
-  items,
-  membership,
-  added,
-  already,
-  name = "set",
-}: {
-  label?: ReactNode;
-  items: PyItem[];
-  membership?: TraceStep["membership"];
-  added?: PyItem;
-  /** A value added again: it was already there, so nothing changes. */
-  already?: PyItem;
-  name?: string;
-}) {
-  return (
-    <div className="set flex flex-col gap-1.5">
-      {label && <div className="seq-label">{label}</div>}
-      <div className="set-box">
-        {items.map((x) => (
-          <span
-            key={String(x)}
-            className="set-item"
-            data-state={(membership && membership.result && membership.value === x) || already === x ? "active" : added === x ? "added" : "idle"}
-          >
-            {pyItem(x)}
-          </span>
-        ))}
-        {!items.length && <span className="seq-empty">empty set</span>}
-      </div>
-      <p className="seq-caption">set: each value once, in no guaranteed order</p>
-      {already !== undefined && (
-        <p className="seq-caption font-bold text-foreground">{pyItem(already)} is already in the set, so nothing changes.</p>
+function setBody(items: PyItem[], membership: TraceStep["membership"] | undefined, added: PyItem | undefined, already: PyItem | undefined) {
+  const perRow = 6;
+  const itemW = Math.max(36, ...items.map((x) => pyItem(x).length * CHAR_W + 20));
+  const rows = Math.max(1, Math.ceil(items.length / perRow));
+  const cols = Math.max(1, Math.min(items.length, perRow));
+  const w = cols * (itemW + 8) + 24;
+  const h = rows * 44 + 16;
+  const node = (
+    <g className="set-svg">
+      <rect x={0} y={0} width={w} height={h} rx={h / 2 > 30 ? 26 : h / 2} className="set-svg-box" />
+      {!items.length && (
+        <text x={w / 2} y={h / 2} className="strip-index">
+          empty set
+        </text>
       )}
-      {added !== undefined && <p className="seq-caption font-bold text-foreground">{pyItem(added)} is new, so it joins the set.</p>}
-      {membership && (
-        <p className="set-check inline-flex items-center gap-2 text-sm font-bold" data-result={String(membership.result)}>
-          <span className="font-mono">
-            {pyItem(membership.value)} in {name}
-          </span>
-          <span className="viz-result" data-result={String(membership.result)}>
-            {membership.result ? "✓ True" : "✗ False"}
-          </span>
-        </p>
-      )}
-    </div>
+      {items.map((x, i) => {
+        const cx = 16 + (i % perRow) * (itemW + 8) + itemW / 2;
+        const cy = 8 + Math.floor(i / perRow) * 44 + 22;
+        const state = (membership && membership.result && membership.value === x) || already === x ? "active" : added === x ? "added" : "idle";
+        return (
+          <g key={String(x)} className="set-item-svg" data-state={state}>
+            <rect x={cx - itemW / 2} y={cy - 16} width={itemW} height={32} rx={16} className="set-item-box" />
+            <text x={cx} y={cy + 1} className="strip-value">
+              {pyItem(x)}
+            </text>
+          </g>
+        );
+      })}
+    </g>
   );
+  return { node, w, h };
 }

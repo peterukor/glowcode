@@ -1,5 +1,6 @@
 import type { Variables } from "@/types/python";
 import type { CalcEvent, ExprNode } from "@/types/trace";
+import { arrowHead, CHAR_W, roundedPath } from "./flow/geometry";
 import { formatValue } from "./values";
 
 /** Python's arithmetic operators. Every other part is an operand: a name or a literal like `1`. */
@@ -37,12 +38,7 @@ export function CalculationView({ calc, vars }: { calc: CalcEvent; vars: Variabl
 
       {calc.tree && (
         // A tree needs its own row: the result and the name follow underneath, not squeezed beside it.
-        <div className="expr-tree font-mono" aria-hidden>
-          <ExpressionTree node={calc.tree} active={calc.active} done={calc.done ?? {}} reading={reading} />
-          <span className="expr-down" data-on={(treeDone && !reading) || undefined}>
-            ↓
-          </span>
-        </div>
+        <ExpressionTree tree={calc.tree} active={calc.active} done={calc.done ?? {}} reading={reading} flowing={treeDone && !reading} />
       )}
       <div className="flex flex-wrap items-center gap-2 font-mono" aria-hidden>
         {!calc.tree &&
@@ -100,44 +96,115 @@ export function CalculationView({ calc, vars }: { calc: CalcEvent; vars: Variabl
 }
 
 /**
- * An expression as a small tree drawn top-down like a flowchart: the values at the top flow
- * down along lines into their operator, and each operator's answer flows into the next one,
- * so the order Python works things out (precedence, brackets) is visible. In `4 + 3 * 2` the
- * `*` has to finish before its answer can flow down into the `+`. An operator shows its
- * answer once it has been worked out; the lines into it glow while it's being worked out.
+ * An expression as a small tree, drawn as a flowchart: the values at the top flow down along
+ * lines into their operator, and each operator's answer flows down into the next one, so the
+ * order Python works things out (precedence, brackets) is visible. In `4 + 3 * 2` the `*` has
+ * to finish before its answer can flow into the `+`. An operator shows its answer once it has
+ * been worked out; it and the lines into it glow while it's being worked out.
  */
-function ExpressionTree({ node, active, done, reading }: { node: ExprNode; active?: string; done: Record<string, string>; reading: boolean }) {
-  if (!("op" in node)) {
-    const isName = node.value !== undefined && node.value !== node.code;
-    return (
-      <span className="calc-node calc-operand expr-leaf" data-on={(reading && isName) || undefined}>
-        {isName && <span className="calc-caption">{reading ? `reading ${node.code}` : node.code}</span>}
-        <span className="font-bold">{node.value ?? node.code}</span>
-      </span>
-    );
-  }
-  const state = active === node.id ? "active" : done[node.id] !== undefined ? "done" : "idle";
-  const value = done[node.id];
+function ExpressionTree({ tree, active, done, reading, flowing }: { tree: ExprNode; active?: string; done: Record<string, string>; reading: boolean; flowing: boolean }) {
+  const laid = layoutTree(tree, done);
+  const stateOf = (n: ExprNode) => (active === n.id ? "active" : done[n.id] !== undefined ? "done" : "idle");
+  const root = laid.nodes.find((n) => n.node === tree)!;
+  const height = laid.height + 34;
   return (
-    <div className="expr-node" data-state={state}>
-      <div className="expr-children">
-        <div className="expr-child">
-          <ExpressionTree node={node.left} active={active} done={done} reading={reading} />
-        </div>
-        <div className="expr-child">
-          <ExpressionTree node={node.right} active={active} done={done} reading={reading} />
-        </div>
-      </div>
-      <span className="expr-stem" />
-      <span className="calc-node calc-op expr-op" data-on={state === "active" || undefined}>
-        <span className="calc-caption">{state === "active" ? "working out" : state === "done" ? "done" : "waits"}</span>
-        <span className="expr-op-line">
-          <span className="expr-symbol">{node.op}</span>
-          {value !== undefined && <span className="expr-result">= {value}</span>}
-        </span>
-      </span>
+    <div className="flow expr-svg mb-1" aria-hidden>
+      <svg viewBox={`0 0 ${laid.width} ${height}`} width={laid.width} className="flow-svg block h-auto max-w-full">
+        {laid.nodes.map((n) =>
+          n.parent ? (
+            <g key={`e-${n.node.id}`} className="flow-edge" data-look={stateOf(n.parent.node) === "active" ? "lit" : stateOf(n.parent.node) === "done" ? "done" : "idle"}>
+              <path d={roundedPath(elbow(n, n.parent))} className="flow-edge-line" />
+              {stateOf(n.parent.node) === "active" && <path d={roundedPath(elbow(n, n.parent))} className="flow-edge-spark" />}
+            </g>
+          ) : null,
+        )}
+        {laid.nodes.map((n) => {
+          const { node } = n;
+          if (!("op" in node)) {
+            const isName = node.value !== undefined && node.value !== node.code;
+            return (
+              <g key={node.id} className="flow-block expr-leaf-svg" data-look={reading && isName ? "lit" : "idle"}>
+                <rect x={n.x - n.w / 2} y={n.y} width={n.w} height={n.h} rx={10} className="flow-block-box" />
+                {isName && (
+                  <text x={n.x} y={n.y + 13} className="flow-caption expr-caption">
+                    {node.code}
+                  </text>
+                )}
+                <text x={n.x} y={n.y + (isName ? 30 : n.h / 2 + 1)} className="expr-value">
+                  {node.value ?? node.code}
+                </text>
+              </g>
+            );
+          }
+          const state = stateOf(node);
+          const look = state === "active" ? "lit" : state === "done" ? "done" : "idle";
+          return (
+            <g key={node.id} className="flow-block expr-op-svg" data-look={look} data-current={state === "active" || undefined}>
+              <rect x={n.x - n.w / 2} y={n.y} width={n.w} height={n.h} rx={n.h / 2} className="flow-block-box" />
+              <text x={n.x} y={n.y + n.h / 2 + 1} className="expr-value">
+                <tspan className="expr-symbol-svg">{node.op}</tspan>
+                {done[node.id] !== undefined && <tspan className="expr-result-svg"> = {done[node.id]}</tspan>}
+              </text>
+            </g>
+          );
+        })}
+        <g className="flow-edge" data-look={flowing ? "lit" : "idle"}>
+          <path d={`M${root.x} ${root.y + root.h}L${root.x} ${height - 2}`} className="flow-edge-line" />
+          <path d={arrowHead([{ x: root.x, y: root.y + root.h }, { x: root.x, y: height - 2 }])} className="flow-arrow" />
+        </g>
+      </svg>
     </div>
   );
+}
+
+type Laid = { node: ExprNode; x: number; y: number; w: number; h: number; parent?: Laid };
+
+const ROW = 70;
+const NODE_H = 40;
+const LEAF_GAP = 14;
+
+/** Leaves left to right, each parent centred over its children, the root at the bottom. */
+function layoutTree(tree: ExprNode, done: Record<string, string>) {
+  const depthOf = (n: ExprNode): number => ("op" in n ? 1 + Math.max(depthOf(n.left), depthOf(n.right)) : 0);
+  const maxDepth = depthOf(tree);
+  const nodes: Laid[] = [];
+  let cursor = 12;
+  const widthOf = (n: ExprNode) => {
+    if (!("op" in n)) {
+      const name = n.value !== undefined && n.value !== n.code;
+      return Math.max((n.value ?? n.code).length * CHAR_W + 28, name ? n.code.length * 6.4 + 20 : 0, 44);
+    }
+    // Room for "= result" from the start, so nodes never resize from one step to the next.
+    return Math.max(56, (n.op.length + 3 + Math.max(3, (done[n.id] ?? "").length)) * CHAR_W + 28);
+  };
+  // `depth` counts down from the root, which sits at the bottom.
+  const visit = (n: ExprNode, depth: number, parent?: Laid): Laid => {
+    const w = widthOf(n);
+    const laid: Laid = { node: n, x: 0, y: 12 + (maxDepth - depth) * ROW, w, h: NODE_H + ("op" in n ? 0 : n.value !== undefined && n.value !== n.code ? 6 : 0), parent };
+    nodes.push(laid);
+    if ("op" in n) {
+      const l = visit(n.left, depth + 1, laid);
+      const r = visit(n.right, depth + 1, laid);
+      laid.x = (l.x + r.x) / 2;
+    } else {
+      laid.x = cursor + w / 2;
+      cursor += w + LEAF_GAP;
+    }
+    return laid;
+  };
+  visit(tree, 0);
+  const width = Math.max(cursor - LEAF_GAP + 12, ...nodes.map((n) => n.x + n.w / 2 + 12));
+  return { nodes, width, height: 12 + maxDepth * ROW + NODE_H + 6 };
+}
+
+function elbow(child: Laid, parent: Laid) {
+  const midY = parent.y - 16;
+  return [
+    { x: child.x, y: child.y + child.h },
+    { x: child.x, y: midY },
+    { x: parent.x, y: midY },
+    { x: parent.x, y: parent.y },
+  ];
 }
 
 function findCode(node: ExprNode, id: string): string | undefined {
