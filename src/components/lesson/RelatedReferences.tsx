@@ -21,7 +21,7 @@ export function RelatedReferences({ ids }: { ids: string[] }) {
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-xs text-muted-foreground">Hover, focus or tap a term for a quick explanation. Full reference pages are on the way.</p>
+      <p className="mt-3 text-xs text-muted-foreground">Hover, focus or tap a term for a quick explanation, then choose “See more” for its full page. You can come back here with “Back to lesson”.</p>
     </section>
   );
 }

@@ -1,16 +1,18 @@
 import { Footprints, Terminal, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CodeView } from "@/components/CodeView";
 import { WalkthroughPlayer } from "@/components/walkthrough/WalkthroughPlayer";
 import { walkthroughActivityId } from "@/courses/queries";
 import type { CodeBlock } from "@/courses/types";
+import { findCodeReferences } from "@/references/codeLinks";
 import { RichTextView } from "./RichTextView";
 
 const LANGUAGE_LABEL = { python: "Python", java: "Java" } as const;
 
 /**
  * A read-only code snippet: language label, line numbers, optional marked lines, caption
- * and printed output. If it has a walkthrough, "Walk through code" expands the
+ * and printed output. Recognised built-ins, keywords and methods explain themselves on
+ * hover, focus or tap. If it has a walkthrough, "Walk through code" expands the
  * step-by-step player right here, in place of the snippet, so the student never loses
  * their place. Without one, no walkthrough button is shown at all.
  */
@@ -23,6 +25,8 @@ export function CodeExample({ block, onActivity }: { block: CodeBlock; onActivit
   const language = LANGUAGE_LABEL[block.language];
   const lineCount = block.code.split("\n").length;
   const predictions = wt?.steps.filter((s) => s.checkpoint).length ?? 0;
+  // Built-ins, keywords and methods that safely link to the manual.
+  const references = useMemo(() => findCodeReferences(block.code, block.language), [block.code, block.language]);
 
   // Move focus into the walkthrough when it opens, and back to its button when it closes.
   useEffect(() => {
@@ -81,6 +85,7 @@ export function CodeExample({ block, onActivity }: { block: CodeBlock; onActivit
           <CodeView
             code={block.code}
             highlightLines={block.highlightLines}
+            references={references}
             label={`${language} code, ${lineCount} ${lineCount === 1 ? "line" : "lines"}`}
             className="rounded-none py-3"
           />

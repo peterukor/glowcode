@@ -82,18 +82,7 @@ describe("LessonBody", () => {
   });
 });
 
-describe("ReferenceLink", () => {
-  it("shows a short definition and toggles it on click", () => {
-    render(<ReferenceLink id="python.builtins.print" label="print()" code />);
-    const term = button("print()");
-    expect(screen.getByRole("tooltip").textContent).toMatch(/Shows values as text/);
-    expect(term.getAttribute("aria-expanded")).toBe("false");
-    fireEvent.click(term);
-    expect(term.getAttribute("aria-expanded")).toBe("true");
-    fireEvent.keyDown(term, { key: "Escape" });
-    expect(term.getAttribute("aria-expanded")).toBe("false");
-  });
-
+describe("ReferenceLink in lessons", () => {
   it("falls back to plain text for an unknown id", () => {
     render(<ReferenceLink id="python.nope" label="nope" />);
     expect(screen.getByText("nope")).toBeTruthy();

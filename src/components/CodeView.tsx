@@ -1,20 +1,35 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { tokenizeLine } from "@/references/code/pythonTokens";
+import type { CodeReference } from "@/references/codeLinks";
+import { ReferenceLink } from "@/references/ReferenceLink";
 
-const KEYWORDS = new Set(["def", "return", "if", "else", "elif", "for", "while", "in", "and", "or", "not", "True", "False", "None", "import", "from", "class", "range"]);
-const BUILTINS = new Set(["print", "len", "append", "input", "str", "int"]);
+const KEYWORDS = new Set(["def", "return", "if", "else", "elif", "for", "while", "in", "and", "or", "not", "is", "True", "False", "None", "import", "from", "class", "break", "continue", "pass", "with", "as", "lambda"]);
+const FUNCTIONS = new Set(["print", "len", "input", "str", "int", "float", "bool", "type", "range", "list", "append", "upper", "lower"]);
 
-/** Tiny Python highlighter: good enough for short beginner snippets, no dependency needed. */
-function highlight(line: string) {
-  const parts = line.split(/(#.*$|"[^"]*"|'[^']*'|\b\d+(?:\.\d+)?\b|\b\w+\b)/g);
-  return parts.map((p, i) => {
-    if (!p) return null;
-    let cls = "";
-    if (p.startsWith("#")) cls = "text-syn-com italic";
-    else if (/^["']/.test(p)) cls = "text-syn-str";
-    else if (/^\d/.test(p)) cls = "text-syn-num";
-    else if (KEYWORDS.has(p)) cls = "text-syn-kw font-semibold";
-    else if (BUILTINS.has(p)) cls = "text-syn-fn";
-    return cls ? <span key={i} className={cls}>{p}</span> : <Fragment key={i}>{p}</Fragment>;
+/** Colour for one token: good enough for short beginner snippets, no dependency needed. */
+function tokenClass(kind: string, text: string) {
+  if (kind === "comment") return "text-syn-com italic";
+  if (kind === "string") return "text-syn-str";
+  if (kind === "number") return "text-syn-num";
+  if (kind === "name" && KEYWORDS.has(text)) return "text-syn-kw font-semibold";
+  if (kind === "name" && FUNCTIONS.has(text)) return "text-syn-fn";
+  return "";
+}
+
+/** One highlighted line. Tokens that start a reference become terms that explain themselves. */
+function renderLine(line: string, refs: CodeReference[]): ReactNode[] {
+  return tokenizeLine(line).map((t, i) => {
+    const cls = tokenClass(t.kind, t.text);
+    const ref = refs.find((r) => r.start === t.start && r.end === t.start + t.text.length);
+    const body = cls ? <span className={cls}>{t.text}</span> : t.text;
+    if (ref) {
+      return (
+        <span key={i} className={cls}>
+          <ReferenceLink id={ref.id} label={t.text} variant="code" />
+        </span>
+      );
+    }
+    return <Fragment key={i}>{body}</Fragment>;
   });
 }
 
@@ -38,6 +53,7 @@ function useOverflows<T extends HTMLElement>() {
  * Read-only highlighted code with line numbers.
  * - `activeLine`: the line running right now (walkthroughs).
  * - `highlightLines`: lines the surrounding text is talking about (lessons).
+ * - `references`: words to link to the manual (from `findCodeReferences`).
  * Long lines scroll sideways rather than wrapping, because indentation matters in Python;
  * when they do, the block becomes focusable so keyboard users can scroll it too.
  */
@@ -45,12 +61,14 @@ export function CodeView({
   code,
   activeLine,
   highlightLines,
+  references = [],
   label = "Code",
   className = "",
 }: {
   code: string;
   activeLine?: number;
   highlightLines?: number[];
+  references?: CodeReference[];
   label?: string;
   className?: string;
 }) {
@@ -86,7 +104,10 @@ export function CodeView({
               {n}
             </span>
             <code className="whitespace-pre">
-              {highlight(ln)}
+              {renderLine(
+                ln,
+                references.filter((r) => r.line === n),
+              )}
               {ln === "" ? " " : null}
             </code>
             {active && <span className="sr-only"> (running now)</span>}
