@@ -141,6 +141,13 @@ describe("Chapter 1 structure", () => {
     }
   });
 
+  it("doesn't ask the same code-versus-output question twice (QA review)", () => {
+    // Lesson 2 asks whether quotes and `print` appear in the output; lesson 3's checkpoint
+    // asks something new: that the text is printed exactly, comma and space included.
+    const hello = walkthrough("py-hello-program").steps.find((st) => st.checkpoint)!.checkpoint!;
+    expect(hello.choices.map((c) => c.id)).toEqual(["exact", "two-lines", "tidied"]);
+  });
+
   it("explains every wrong answer instead of just marking it wrong", () => {
     for (const lesson of lessons) {
       for (const q of questions(lesson)) {
@@ -173,7 +180,7 @@ describe("Chapter 1 answers", () => {
     expect(answerOf("reading-code-step-by-step", "predict-second-line")).toBe("five");
     expect(answerOf("reading-code-step-by-step", "predict-next-statement")).toBe("three");
     expect(answerOf("chapter-1-review", "review-last-line")).toBe("ten");
-    expect(answerOf("chapter-1-review", "review-next-line")).toBe("line3");
+    expect(answerOf("chapter-1-review", "review-next-line")).toBe("line4");
     expect(answerOf("chapter-1-review", "review-code-vs-output")).toBe("code");
     expect(answerOf("chapter-1-review", "review-debug-misspelled")).toBe("spelling");
     expect(answerOf("chapter-1-review", "review-debug-syntax")).toBe("quote");

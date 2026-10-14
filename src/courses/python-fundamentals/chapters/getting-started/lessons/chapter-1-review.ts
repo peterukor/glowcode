@@ -65,26 +65,27 @@ print(10)`,
           type: "question",
           id: "review-next-line",
           variant: "predict",
-          prompt: "Python has just printed `B`. Which line of the code runs next?",
+          prompt: "Python has just printed `B`. What happens next?",
           code: `print("A")
 print("B")
-print("C")
-print("D")`,
+
+print(4 + 4)`,
           choices: [
             {
-              id: "line2",
-              text: "Line 2 again",
-              feedback: "A statement in a program like this runs once. After line 2 finishes, Python moves on.",
+              id: "blank",
+              text: "Line 3 prints an empty line",
+              feedback: "Line 3 has no code at all, so there's no statement to run. Only a `print()` call puts something on the screen.",
             },
-            { id: "line3", text: "Line 3" },
+            { id: "line4", text: "Python skips the empty line 3, works out `4 + 4` on line 4 and prints `8`" },
             {
-              id: "line4",
-              text: "Line 4, the last one",
-              feedback: "Python doesn't jump ahead. Each statement gets its turn in order.",
+              id: "ends",
+              text: "The program ends at the gap",
+              feedback: "An empty line doesn't stop anything. Is there a statement after it?",
             },
           ],
-          answer: "line3",
-          explanation: "`B` comes from line 2, so line 2 has just finished. In a straight-down program like this, the next statement is the one below it: line 3, which prints `C`.",
+          answer: "line4",
+          explanation:
+            "An empty line isn't a statement; it just makes code easier to read, so Python moves straight on to line 4. There it evaluates `4 + 4` to `8` and prints `8`. The output is `A`, `B`, `8`, with no empty line.",
         },
         {
           type: "question",
