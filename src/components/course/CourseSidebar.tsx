@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Check, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { visibleChapters } from "@/courses/queries";
+import { isPlanned, visibleChapters } from "@/courses/queries";
 import type { Course } from "@/courses/types";
 import { isLessonComplete, summarizeCourse } from "@/progress/progress";
 import { useCourseProgress } from "@/progress/useProgress";
@@ -46,6 +46,17 @@ export function CourseSidebar({
 
       <ol className="flex flex-col gap-2">
         {chapters.map((chapter, ci) => {
+          const number = String(ci + 1).padStart(2, "0");
+          if (isPlanned(chapter)) {
+            // Part of the outline, nothing to open yet: no lessons, no fake links.
+            return (
+              <li key={chapter.id} className="planned-chapter flex items-center gap-2 rounded-xl px-2 py-2 text-muted-foreground/75" title={chapter.description}>
+                <span className="font-mono text-xs font-bold">{number}</span>
+                <span className="flex-1 text-sm font-semibold">{chapter.title}</span>
+                <span className="rounded-full border border-dashed border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">Planned</span>
+              </li>
+            );
+          }
           const isCollapsed = Boolean(collapsed[chapter.id]);
           const listId = `chapter-${chapter.id}-lessons`;
           return (
@@ -57,7 +68,7 @@ export function CourseSidebar({
                 onClick={() => setCollapsed((c) => ({ ...c, [chapter.id]: !isCollapsed }))}
                 className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left hover:bg-muted"
               >
-                <span className="font-mono text-xs font-bold text-muted-foreground">{String(ci + 1).padStart(2, "0")}</span>
+                <span className="font-mono text-xs font-bold text-muted-foreground">{number}</span>
                 <span className="flex-1 text-sm font-bold">{chapter.title}</span>
                 <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isCollapsed ? "-rotate-90" : ""}`} aria-hidden />
               </button>
@@ -100,6 +111,12 @@ export function CourseSidebar({
                       </li>
                     );
                   })}
+                  {chapter.status === "in-progress" && (
+                    <li className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground/75">
+                      <span className="h-4 w-4 shrink-0 rounded-full border-2 border-dashed border-border" aria-hidden />
+                      More lessons in this chapter are on the way
+                    </li>
+                  )}
                 </ol>
               )}
             </li>

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Clock } from "lucide-react";
-import { isOpenable, publishedLessons } from "@/courses/queries";
+import { chapterCounts, isOpenable, publishedLessons } from "@/courses/queries";
 import type { Course } from "@/courses/types";
 import { resumeTarget, summarizeCourse, type CourseProgress as Progress } from "@/progress/progress";
 import { CourseProgress } from "./CourseProgress";
@@ -12,6 +12,7 @@ export function CourseCard({ course, progress }: { course: Course; progress: Pro
   const summary = summarizeCourse(course, progress);
   const lessonCount = publishedLessons(course).length;
   const target = resumeTarget(course, progress);
+  const chapters = chapterCounts(course);
 
   return (
     <article
@@ -37,6 +38,11 @@ export function CourseCard({ course, progress }: { course: Course; progress: Pro
         {course.title}
       </h2>
       <p className="mt-2 text-muted-foreground">{course.description}</p>
+      {open && chapters.upcoming > 0 && (
+        <p className="mt-3 text-sm font-semibold text-muted-foreground">
+          {chapters.available} of {chapters.total} chapters available · {chapters.upcoming} planned
+        </p>
+      )}
 
       <div className="mt-auto pt-6">
         {open && target ? (

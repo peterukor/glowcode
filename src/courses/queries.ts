@@ -12,11 +12,23 @@ export type LessonEntry = { lesson: Lesson; chapter: Chapter };
 
 export const isOpenable = (course: Course) => course.status === "published";
 
-/** Chapters and lessons a student can see (published + coming soon). Drafts are removed entirely. */
+export const isPlanned = (chapter: Chapter) => chapter.status === "planned";
+
+/**
+ * Chapters and lessons a student can see (published + coming soon), plus planned chapters
+ * from the outline. Drafts are removed entirely, and so is a chapter left with nothing to show.
+ */
 export function visibleChapters(course: Course): Chapter[] {
   return course.chapters
     .map((ch) => ({ ...ch, lessons: ch.lessons.filter((l) => l.status !== "draft") }))
-    .filter((ch) => ch.lessons.length > 0);
+    .filter((ch) => ch.lessons.length > 0 || isPlanned(ch));
+}
+
+/** How much of the outline a student can open: chapters with at least one published lesson, and the rest. */
+export function chapterCounts(course: Course) {
+  const visible = visibleChapters(course);
+  const available = visible.filter((ch) => ch.lessons.some((l) => l.status === "published")).length;
+  return { available, upcoming: visible.length - available, total: visible.length };
 }
 
 /** Lessons a student can open, in reading order across chapters. */
@@ -38,6 +50,14 @@ export function lessonNeighbors(course: Course, lessonId: string) {
   return { prev: i > 0 ? list[i - 1] : undefined, next: i >= 0 ? list[i + 1] : undefined };
 }
 
+/** Where a lesson sits within its own chapter, counting only lessons a student can open. */
+export function lessonPosition(course: Course, lessonId: string) {
+  const entry = findPublishedLesson(course, lessonId);
+  if (!entry) return undefined;
+  const inChapter = publishedLessons(course).filter((e) => e.chapter.id === entry.chapter.id);
+  return { index: inChapter.findIndex((e) => e.lesson.id === lessonId) + 1, count: inChapter.length };
+}
+
 function blocksOf(lesson: Lesson): Block[] {
   return lesson.sections.flatMap((s) => s.blocks);
 }
@@ -53,6 +73,11 @@ export function activitiesIn(lesson: Lesson): ActivityBlock[] {
   return blocksOf(lesson).filter(
     (b): b is ActivityBlock => b.type === "question" || b.type === "reflect" || b.type === "practice",
   );
+}
+
+/** Every id "resume where you left off" can point at in a lesson: its activities and walkthroughs. */
+export function resumableIdsIn(lesson: Lesson): Set<string> {
+  return new Set([...activitiesIn(lesson).map((a) => a.id), ...walkthroughsIn(lesson).map((w) => walkthroughActivityId(w.id))]);
 }
 
 function richTextIn(block: Block): RichText[] {
@@ -92,6 +117,11 @@ function richTextIn(block: Block): RichText[] {
  * Catches content mistakes before students see them: duplicate ids, broken reference
  * links, answers that aren't one of the choices, broken walkthroughs. Run by the test suite.
  */
+/** Reference ids linked from a lesson's text (inline [label](ref:id) links), in reading order. */
+export function linkedReferencesIn(lesson: Lesson): string[] {
+  return blocksOf(lesson).flatMap(richTextIn).flatMap(referencesIn);
+}
+
 export function validateCourses(courses: Course[]): string[] {
   const problems: string[] = [];
   const dup = (ids: string[], what: string, where = "") => {
@@ -114,6 +144,15 @@ export function validateCourses(courses: Course[]): string[] {
       problems.push(`Course "${course.id}" is published but has no published lessons`);
     }
     dup(course.chapters.map((c) => c.id), "chapter", course.id);
+    for (const chapter of course.chapters) {
+      urlSafe(chapter.id, "Chapter");
+      if (isPlanned(chapter) && chapter.lessons.length > 0) {
+        problems.push(`Chapter "${chapter.id}" is planned but has lessons; publish them or remove the planned status`);
+      }
+      if (!isPlanned(chapter) && chapter.lessons.length === 0) {
+        problems.push(`Chapter "${chapter.id}" has no lessons; mark it planned`);
+      }
+    }
     const lessons = course.chapters.flatMap((c) => c.lessons);
     dup(lessons.map((l) => l.id), "lesson", course.id);
 
@@ -124,7 +163,7 @@ export function validateCourses(courses: Course[]): string[] {
       dup(activitiesIn(lesson).map((a) => a.id), "activity", where);
       walkthroughIds.push(...walkthroughsIn(lesson).map((w) => w.id));
 
-      const refs = [...(lesson.references ?? []), ...blocksOf(lesson).flatMap(richTextIn).flatMap(referencesIn)];
+      const refs = [...(lesson.references ?? []), ...linkedReferencesIn(lesson)];
       for (const id of refs) if (!getReference(id)) problems.push(`${where}: unknown reference "${id}"`);
 
       for (const block of blocksOf(lesson)) {

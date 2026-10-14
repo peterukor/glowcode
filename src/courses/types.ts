@@ -31,10 +31,21 @@ export type Course = {
   chapters: Chapter[];
 };
 
+/**
+ * Where a chapter stands in the course outline:
+ * - complete:    every lesson it's meant to have is written (the default)
+ * - in-progress: some lessons are open; more are still to be written
+ * - planned:     part of the outline, but no lessons yet. It must have no lessons:
+ *                Glowcode never shows placeholder lessons that pretend to be content.
+ */
+export type ChapterStatus = "complete" | "in-progress" | "planned";
+
 export type Chapter = {
+  /** Stable, URL-safe. Never change once students have progress. */
   id: string;
   title: string;
   description: string;
+  status?: ChapterStatus;
   lessons: Lesson[];
 };
 

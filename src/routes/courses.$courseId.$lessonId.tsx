@@ -7,7 +7,7 @@ import { LessonHeader } from "@/components/lesson/LessonHeader";
 import { LessonLayout } from "@/components/lesson/LessonLayout";
 import { LessonNavigation } from "@/components/lesson/LessonNavigation";
 import { RelatedReferences } from "@/components/lesson/RelatedReferences";
-import { findPublishedLesson, lessonNeighbors, publishedLessons } from "@/courses/queries";
+import { findPublishedLesson, lessonNeighbors, lessonPosition } from "@/courses/queries";
 import { getCourse } from "@/courses/registry";
 import { isLessonComplete } from "@/progress/progress";
 import { progressActions, useCourseProgress } from "@/progress/useProgress";
@@ -54,8 +54,9 @@ function LessonPage() {
     }
   }, [lesson.id]);
 
-  const list = publishedLessons(course);
-  const position = `Lesson ${list.findIndex((e) => e.lesson.id === lesson.id) + 1} of ${list.length}`;
+  // Counted within the chapter: "Lesson 3 of 6" of Getting Started, not of the whole course.
+  const at = lessonPosition(course, lesson.id);
+  const position = at ? `Lesson ${at.index} of ${at.count}` : "";
   const { prev, next } = lessonNeighbors(course, lesson.id);
 
   const assistantContext: AssistantContext = {
