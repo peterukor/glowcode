@@ -45,3 +45,31 @@ export function stripSize(items: PyItem[], strings: boolean, rows: StripRows = {
 export function stripCellCentre(index: number, start: number, cellW: number, rows: StripRows = {}) {
   return { x: STRIP.more + (index - start) * cellW + cellW / 2, y: cellsTop(rows) + STRIP.cellH / 2 };
 }
+
+/** Width of one character in a strip label (600 14px mono, a little wider than CHAR_W). */
+export const LABEL_CHAR_W = 8.6;
+
+/**
+ * Shortens the iterable in a `for … in …` label so the whole label fits in `maxChars`.
+ * A list or tuple literal keeps its first items and its last one, with "…" between
+ * (`[1, 2, 3, …, 20]`); anything else is cut with a trailing "…". The full code is
+ * always in the code panel next to the diagram.
+ */
+export function fitIterable(iterable: string, maxChars: number): string {
+  if (iterable.length <= maxChars) return iterable;
+  const literal = /^([[(])(.*)([\])])$/.exec(iterable);
+  const parts = literal ? literal[2]!.split(", ") : [];
+  // Only split simple literals (numbers, short words), where ", " can't occur inside an item.
+  if (literal && parts.length > 2 && parts.every((x) => !/[[\](){}"']/.test(x))) {
+    const open = literal[1]!;
+    const close = literal[3]!;
+    const last = parts.at(-1)!;
+    for (let keep = parts.length - 2; keep >= 1; keep--) {
+      const text = `${open}${parts.slice(0, keep).join(", ")}, …, ${last}${close}`;
+      if (text.length <= maxChars) return text;
+    }
+    const shortest = `${open}${parts[0]}, …${close}`;
+    if (shortest.length <= maxChars) return shortest;
+  }
+  return `${iterable.slice(0, Math.max(1, maxChars - 1))}…`;
+}

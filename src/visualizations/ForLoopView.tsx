@@ -6,7 +6,7 @@ import { CHAR_W } from "./flow/geometry";
 import { LoopDiagram, type LoopLooks, type TravellingChip } from "./loops/LoopDiagram";
 import { layoutLoop, type LoopEdgeId } from "./loops/loopLayout";
 import { SequenceStrip } from "./loops/SequenceStrip";
-import { stripCellCentre, stripSize, type StripTone } from "./loops/strip";
+import { fitIterable, LABEL_CHAR_W, stripCellCentre, stripSize, type StripTone } from "./loops/strip";
 import type { CellState } from "./SegmentedSequence";
 import { formatValue, pyItem } from "./values";
 
@@ -143,9 +143,13 @@ export function ForLoopView({ shape, trace, vars }: { shape: ForLoopShape; trace
   }
 
   const targetValue = assigning ? "" : variable ? formatValue(variable) : "?";
+  // The label is centred over the strip; shorten a long iterable so it isn't cut off at the
+  // diagram's edges (e.g. a 20-item list literal).
+  const labelRoom = Math.floor((2 * Math.min(header.x + header.w / 2, layout.width - header.x - header.w / 2) - 16) / LABEL_CHAR_W);
+  const iterableText = fitIterable(shape.iterable, labelRoom - `for ${shape.target} in `.length);
   const label = (
     <>
-      <tspan className="strip-kw">for</tspan> {shape.target} <tspan className="strip-kw">in</tspan> {shape.iterable}
+      <tspan className="strip-kw">for</tspan> {shape.target} <tspan className="strip-kw">in</tspan> {iterableText}
     </>
   );
 
