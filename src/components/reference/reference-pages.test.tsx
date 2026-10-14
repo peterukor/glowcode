@@ -42,7 +42,7 @@ describe("ReferenceEntryView", () => {
 describe("ReferenceHome", () => {
   it("shows ranked results for a search", () => {
     render(<ReferenceHome query="string uppercase" onQueryChange={() => {}} />);
-    const first = screen.getByRole("region", { name: /results for/ }).querySelector("a")!;
+    const first = screen.getByRole("region", { name: /results? for “string uppercase”/ }).querySelector("a")!;
     expect(first.getAttribute("href")).toBe("/reference/python.types.str.upper");
   });
 
