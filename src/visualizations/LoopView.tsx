@@ -25,7 +25,10 @@ export function LoopView({ items, current }: { items: (string | number)[]; curre
               aria-current={now ? "step" : undefined}
             >
               {pyItem(item)}
-              <span className="absolute -bottom-6 whitespace-nowrap text-[10px] font-bold uppercase text-muted-foreground">lap {i + 1}</span>
+              <span className="absolute -bottom-6 whitespace-nowrap text-[10px] font-bold uppercase text-muted-foreground">
+                lap {i + 1}
+                {now ? " · now" : done ? " ✓" : ""}
+              </span>
             </div>
             <span className={`text-2xl ${done || now ? "text-primary" : "text-border"}`} aria-hidden>
               →

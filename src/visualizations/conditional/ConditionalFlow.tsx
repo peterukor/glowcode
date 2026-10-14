@@ -1,4 +1,5 @@
 import { useMemo, type CSSProperties } from "react";
+import { useOverflows } from "@/hooks/useOverflows";
 import type { IfChain, IfChainTrace } from "@/types/conditional";
 import { layoutIfChain, type Box, type EdgeSource, type FlowEdge, type FlowNode } from "./layout";
 import { deriveChainState, type ChainState, type ConditionState } from "./state";
@@ -186,6 +187,7 @@ function EdgeLabel({ edge, look }: { edge: FlowEdge; look: Look }) {
 export function ConditionalFlow({ chain, trace }: { chain: IfChain; trace?: IfChainTrace }) {
   const layout = useMemo(() => layoutIfChain(chain), [chain]);
   const state = deriveChainState(chain, trace);
+  const [scrollRef, overflows] = useOverflows<HTMLDivElement>();
 
   const edges = layout.edges
     .map((edge) => ({ edge, look: edgeLook(edge.source, state) }))
@@ -196,12 +198,20 @@ export function ConditionalFlow({ chain, trace }: { chain: IfChain; trace?: IfCh
   const others = layout.nodes.filter((n) => n.type !== "frame");
 
   return (
-    <div className="flow overflow-x-auto">
+    // Wide charts keep a readable minimum size and scroll sideways on narrow screens
+    // instead of shrinking until the labels can't be read.
+    <div
+      ref={scrollRef}
+      className="flow overflow-x-auto"
+      tabIndex={overflows ? 0 : undefined}
+      role={overflows ? "region" : undefined}
+      aria-label={overflows ? "Flow diagram, scrolls sideways" : undefined}
+    >
       <svg
         viewBox={`0 0 ${layout.width} ${layout.height}`}
         width={layout.width}
         className="flow-svg mx-auto block h-auto max-w-full"
-        style={{ "--flow-w": `${layout.width}px` } as CSSProperties}
+        style={{ "--flow-w": `${layout.width}px`, minWidth: `min(${layout.width}px, 30rem)` } as CSSProperties}
         role="img"
         aria-label="Flow of the if statement: which conditions were True or False and which block ran"
       >

@@ -274,13 +274,28 @@
     0 8px 20px -8px var(--glow);
 }
 
-/* ------------------------------------- calculation and function diagrams
-   Every part stays visible; parts involved in the current step glow (data-on),
-   the rest fade back. Short transitions; none with reduced motion. */
+/* ------------------------------------------------ shared diagram states
+   One visual language for every diagram (calculations, calls, loops, variables):
+   - idle parts stay visible but quiet (--viz-idle-opacity)
+   - parts in the current event glow (data-on), with the same outline and shadow
+   - skipped parts fade further and get a dashed border (data-skipped)
+   Each part also carries a text caption, so state never depends on color alone.
+   Short transitions; none with reduced motion. The conditional flow tree uses the same
+   colors through its own data-look states (see below). */
+
+:root {
+  --viz-active: var(--primary);
+  --viz-idle-opacity: 0.55;
+  --viz-glow:
+    0 0 0 3px color-mix(in srgb, var(--viz-active) 18%, transparent),
+    0 8px 22px -10px var(--viz-active);
+  --viz-speed: 0.2s;
+}
 
 .calc-node,
 .fn-node,
-.fn-slot {
+.fn-slot,
+.viz-node {
   display: inline-flex;
   flex-direction: column;
   justify-content: center;
@@ -290,12 +305,12 @@
   border-radius: 0.875rem;
   background: var(--card);
   padding: 0.35rem 0.75rem;
-  opacity: 0.55;
+  opacity: var(--viz-idle-opacity);
   transition:
-    opacity 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
+    opacity var(--viz-speed) ease,
+    border-color var(--viz-speed) ease,
+    box-shadow var(--viz-speed) ease,
+    transform var(--viz-speed) ease;
 }
 .calc-op {
   align-items: center;
@@ -304,19 +319,23 @@
 }
 .calc-node[data-on],
 .fn-node[data-on],
-.fn-slot[data-on] {
+.fn-slot[data-on],
+.viz-node[data-on] {
   opacity: 1;
-  border-color: var(--primary);
-  box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent),
-    0 8px 22px -10px var(--primary);
+  border-color: var(--viz-active);
+  box-shadow: var(--viz-glow);
   transform: translateY(-1px);
 }
+.viz-node[data-skipped] {
+  opacity: 0.35;
+  border-style: dashed;
+}
 .calc-result[data-on] {
-  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  background: color-mix(in srgb, var(--viz-active) 8%, var(--card));
 }
 .calc-caption,
-.fn-caption {
+.fn-caption,
+.viz-caption {
   font-family: var(--font-sans, inherit);
   font-size: 10px;
   font-weight: 700;
@@ -329,11 +348,52 @@
   align-self: center;
   font-size: 1.25rem;
   color: var(--border);
-  transition: color 0.2s ease;
+  transition: color var(--viz-speed) ease;
 }
 .calc-arrow[data-on],
 .fn-arrow[data-on] {
-  color: var(--primary);
+  color: var(--viz-active);
+}
+.viz-edge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-left: 1rem;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  opacity: var(--viz-idle-opacity);
+  transition:
+    opacity var(--viz-speed) ease,
+    color var(--viz-speed) ease;
+}
+.viz-edge[data-on] {
+  opacity: 1;
+  color: var(--viz-active);
+}
+.viz-edge-back {
+  flex-direction: column;
+  justify-content: center;
+  border: 2px dashed var(--border);
+  border-left: 0;
+  border-radius: 0 1rem 1rem 0;
+  padding: 0.5rem 0.4rem;
+}
+.viz-edge-back[data-on] {
+  border-color: var(--viz-active);
+}
+.viz-result {
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+  font-size: 12px;
+}
+.viz-result[data-result="true"] {
+  background: color-mix(in srgb, var(--teal) 18%, transparent);
+  color: var(--color-teal-ink);
+}
+.viz-result[data-result="false"] {
+  background: color-mix(in srgb, var(--coral) 15%, transparent);
+  color: var(--color-coral-ink);
 }
 .fn-node {
   align-items: center;
@@ -359,10 +419,19 @@
   color: var(--code-line);
 }
 
+/* Variable bindings: name → value. "changed" glows in the value's type color; "reading" gets a
+   dashed outline (and a text label in the markup). */
+.binding[data-state="reading"] {
+  border-style: dashed;
+  border-color: var(--viz-active);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .calc-node,
   .fn-node,
   .fn-slot,
+  .viz-node,
+  .viz-edge,
   .calc-arrow,
   .fn-arrow {
     transition: none;
@@ -809,7 +878,8 @@
 }
 
 /* Code that scrolls sideways can be focused and scrolled with the keyboard. */
-.code-view:focus-visible {
+.code-view:focus-visible,
+.flow:focus-visible {
   outline: 3px solid var(--primary);
   outline-offset: -3px;
 }

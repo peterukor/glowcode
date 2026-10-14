@@ -1,7 +1,8 @@
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { tokenizeLine } from "@/references/code/pythonTokens";
 import type { CodeReference } from "@/references/codeLinks";
 import { ReferenceLink } from "@/references/ReferenceLink";
+import { useOverflows } from "@/hooks/useOverflows";
 
 const KEYWORDS = new Set(["def", "return", "if", "else", "elif", "for", "while", "in", "and", "or", "not", "is", "True", "False", "None", "import", "from", "class", "break", "continue", "pass", "with", "as", "lambda"]);
 const FUNCTIONS = new Set(["print", "len", "input", "str", "int", "float", "bool", "type", "range", "list", "append", "upper", "lower"]);
@@ -34,21 +35,6 @@ function renderLine(line: string, refs: CodeReference[]): ReactNode[] {
 }
 
 /** True when the element is wider than its box, so it needs to be keyboard-scrollable. */
-function useOverflows<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [overflows, setOverflows] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const check = () => setOverflows(el.scrollWidth > el.clientWidth + 1);
-    check();
-    const ro = new ResizeObserver(check);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  return [ref, overflows] as const;
-}
-
 /**
  * Read-only highlighted code with line numbers.
  * - `activeLine`: the line running right now (walkthroughs).
