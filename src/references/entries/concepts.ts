@@ -60,6 +60,74 @@ print("three")`,
     related: ["concept.program", "python.errors.NameError"],
   },
   {
+    id: "concept.python",
+    scope: "concept",
+    category: "concept",
+    title: "Python",
+    summary: "A popular programming language known for being readable. Glowcode's first course teaches it.",
+    aliases: ["python language", "python 3"],
+    keywords: ["what is python", "language"],
+    explanation: [
+      "**Python** is a [programming language](ref:concept.programming-language): a set of words, symbols and exact rules for writing instructions a computer can carry out. Its code reads a lot like short English phrases, which is one reason it's a popular first language.",
+      "Python is used for websites, data analysis, science, games, automating boring jobs and much more. Python code is run by the [Python interpreter](ref:concept.interpreter), which reads the code and carries it out one statement at a time.",
+    ],
+    examples: [
+      {
+        code: `print("Hello, world!")`,
+        output: ["Hello, world!"],
+        caption: "A complete Python program. Many people's first.",
+      },
+    ],
+    related: ["concept.programming-language", "concept.interpreter", "concept.program"],
+  },
+  {
+    id: "concept.statement",
+    scope: "concept",
+    category: "concept",
+    title: "Statement",
+    summary: "One complete instruction in a program. Python runs statements one at a time, finishing each before it starts the next.",
+    aliases: ["statements", "instruction", "line of code"],
+    keywords: ["one line", "instruction", "execute", "run order"],
+    explanation: [
+      "A **statement** is one complete instruction, such as `print(\"Hi\")` or `age = 13`. In simple programs each line is one statement, and Python runs them from the top, one after another.",
+      "Python finishes each statement completely before starting the next, so their effects happen in order. Later you'll meet statements that contain other statements, like `if` and `for`, which decide whether, or how many times, the lines inside them run.",
+      "A statement is different from an [expression](ref:concept.expression). A statement **does** something; an expression **works out to a value**. `print(10 + 5)` is a statement that contains the expression `10 + 5`.",
+    ],
+    examples: [
+      {
+        code: `print("Ready")
+print("Set")
+print("Go")`,
+        output: ["Ready", "Set", "Go"],
+        caption: "Three statements, run in order. The output is in the same order.",
+      },
+    ],
+    related: ["concept.program", "concept.expression", "concept.interpreter"],
+  },
+  {
+    id: "concept.expression",
+    scope: "concept",
+    category: "concept",
+    title: "Expression",
+    summary: "A piece of code that Python works out to get a single value, like `10 + 5` (which is 15).",
+    aliases: ["expressions", "evaluate", "evaluation"],
+    keywords: ["work out", "calculate", "value of", "evaluates to"],
+    explanation: [
+      "An **expression** is code that has a value. `10 + 5` is an expression whose value is `15`. A plain value like `42` or `\"Hi\"` is an expression too, and so is a variable name, whose value is whatever it refers to.",
+      "Working out an expression's value is called **evaluating** it. When an expression is used inside something else, such as `print(10 + 5)`, Python evaluates it **first** and then uses the result. `print()` receives `15`; it never sees the `+`.",
+      "Quotes change everything: `\"10 + 5\"` is a string, and its value is just those characters.",
+    ],
+    examples: [
+      {
+        code: `print(10 + 5)
+print("10 + 5")`,
+        output: ["15", "10 + 5"],
+        caption: "Line 1 evaluates the expression and prints its value. Line 2 prints a string exactly as it is.",
+      },
+    ],
+    related: ["concept.statement", "python.types.int", "python.types.str", "python.builtins.print"],
+  },
+  {
     id: "concept.variable",
     scope: "concept",
     category: "concept",
