@@ -4,7 +4,8 @@ import { isCollection, type PyItem, type PyValue } from "@/types/python";
 import type { TraceStep } from "@/types/trace";
 import { collectionWindow, itemFocus, type WindowFocus } from "./collectionWindow";
 import { arrowHead, CHAR_W } from "./flow/geometry";
-import { SequenceStrip, STRIP, stripSize, type StripTone } from "./loops/SequenceStrip";
+import { SequenceStrip } from "./loops/SequenceStrip";
+import { STRIP, stripSize, type StripTone } from "./loops/strip";
 import type { CellState } from "./SegmentedSequence";
 import { formatValue, pyItem } from "./values";
 

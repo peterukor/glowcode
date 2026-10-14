@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { WhileLoopShape, WhileLoopTrace } from "@/types/trace";
 import { LoopDiagram, type LoopLooks } from "./loops/LoopDiagram";
-import { layoutLoop } from "./loops/loopLayout";
+import { layoutLoop, type LoopEdgeId } from "./loops/loopLayout";
 
 /**
  * A while loop as a flowchart built from the same parts as the for loop and the if chain:
@@ -60,7 +60,8 @@ export function WhileLoopView({ shape, trace }: { shape: WhileLoopShape; trace?:
     const line = trace?.bodyLine ?? 0;
     looks.nodes.decision = "true";
     looks.nodes.frame = "lit";
-    looks.edges[line === 0 ? "yes" : `body-${line}`] = "lit";
+    const into: LoopEdgeId = line === 0 ? "yes" : `body-${line}`;
+    looks.edges[into] = "lit";
     if (line > 0) looks.edges.yes = "done";
     shape.body.forEach((_, i) => {
       if (i < line) looks.nodes[`body-${i}`] = "done";

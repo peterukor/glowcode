@@ -4,8 +4,9 @@ import type { ForLoopShape, ForLoopTrace } from "@/types/trace";
 import { collectionWindow } from "./collectionWindow";
 import { CHAR_W } from "./flow/geometry";
 import { LoopDiagram, type LoopLooks, type TravellingChip } from "./loops/LoopDiagram";
-import { layoutLoop } from "./loops/loopLayout";
-import { SequenceStrip, stripCellCentre, stripSize, type StripTone } from "./loops/SequenceStrip";
+import { layoutLoop, type LoopEdgeId } from "./loops/loopLayout";
+import { SequenceStrip } from "./loops/SequenceStrip";
+import { stripCellCentre, stripSize, type StripTone } from "./loops/strip";
 import type { CellState } from "./SegmentedSequence";
 import { formatValue, pyItem } from "./values";
 
@@ -111,7 +112,8 @@ export function ForLoopView({ shape, trace, vars }: { shape: ForLoopShape; trace
     looks.edges.yes = "done";
     looks.nodes.target = "done";
     looks.nodes.frame = "lit";
-    looks.edges[line === 0 ? "into-body" : `body-${line}`] = "lit";
+    const into: LoopEdgeId = line === 0 ? "into-body" : `body-${line}`;
+    looks.edges[into] = "lit";
     shape.body.forEach((_, i) => {
       if (i < line) looks.nodes[`body-${i}`] = "done";
     });
