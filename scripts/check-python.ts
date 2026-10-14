@@ -22,6 +22,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { courses } from "@/courses/registry";
 import type { Block } from "@/courses/types";
+import { acceptanceVisuals } from "@/data/acceptanceVisuals";
 import { examples } from "@/data/examples";
 import { pythonVisuals } from "@/data/pythonVisuals";
 import { allReferences } from "@/references/registry";
@@ -274,6 +275,7 @@ for (const course of courses) {
 }
 for (const example of examples) checkWalkthrough(example, "playground");
 for (const w of pythonVisuals) checkWalkthrough(w, "showcase");
+for (const w of acceptanceVisuals) checkWalkthrough(w, "acceptance");
 
 const lastLine = (text: string) => text.split("\n").at(-1) ?? "";
 for (const entry of allReferences) {

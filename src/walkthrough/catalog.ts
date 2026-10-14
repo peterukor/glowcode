@@ -5,6 +5,7 @@
  */
 import { walkthroughsIn } from "@/courses/queries";
 import { courses } from "@/courses/registry";
+import { acceptanceVisuals } from "@/data/acceptanceVisuals";
 import { examples } from "@/data/examples";
 import { pythonVisuals } from "@/data/pythonVisuals";
 import { allReferences } from "@/references/registry";
@@ -26,6 +27,7 @@ export function walkthroughCatalog(): CatalogEntry[] {
   }
   for (const w of examples) add(w, "Playground");
   for (const w of pythonVisuals) add(w, "Showcase");
+  for (const w of acceptanceVisuals) add(w, "QA acceptance");
   for (const entry of allReferences) {
     for (const x of entry.examples ?? []) if (x.walkthrough) add(x.walkthrough, `Manual: ${entry.title}`);
   }
@@ -38,6 +40,7 @@ export function allWalkthroughUses(): Walkthrough[] {
     ...courses.flatMap((c) => c.chapters.flatMap((ch) => ch.lessons.flatMap(walkthroughsIn))),
     ...examples,
     ...pythonVisuals,
+    ...acceptanceVisuals,
     ...allReferences.flatMap((e) => (e.examples ?? []).flatMap((x) => (x.walkthrough ? [x.walkthrough] : []))),
   ];
 }
