@@ -29,8 +29,8 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-lg">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-5">
         <Link to="/" className="flex shrink-0 items-center" aria-label="Glowcode home">
-          <img src="/brand/glowcode-icon.png" alt="" className="h-9 w-9 sm:hidden" />
-          <img src="/brand/glowcode-wordmark.png" alt="Glowcode" className="hidden h-9 w-auto sm:block" />
+          <img src={`${import.meta.env.BASE_URL}brand/glowcode-icon.png`} alt="" className="h-9 w-9 sm:hidden" />
+          <img src={`${import.meta.env.BASE_URL}brand/glowcode-wordmark.png`} alt="Glowcode" className="hidden h-9 w-auto sm:block" />
         </Link>
         <nav className="flex items-center gap-0.5 sm:gap-1">
           <Link to="/courses" className={link} activeProps={active}>

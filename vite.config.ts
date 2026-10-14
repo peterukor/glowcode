@@ -6,6 +6,8 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  // GitHub Pages serves the site from /glowcode/; the deploy workflow sets BASE_PATH. Locally it's "/".
+  base: process.env.BASE_PATH || "/",
   plugins: [
     // Must run before the React plugin: it generates src/routeTree.gen.ts from src/routes/.
     tanstackRouter({ target: "react", autoCodeSplitting: true }),

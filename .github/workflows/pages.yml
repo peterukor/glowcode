@@ -1,0 +1,64 @@
+name: Deploy to GitHub Pages
+
+# Publishes the site at https://peterukor.github.io/glowcode/ whenever main changes.
+# Only main is published, so work on other branches never appears on the live site.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push replaces a waiting one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Check before publishing
+        run: |
+          bun run typecheck
+          bun run test
+          bun run check:python
+
+      - name: Build for /glowcode/
+        run: bun run build
+        env:
+          BASE_PATH: /glowcode/
+
+      # GitHub Pages has no fallback for app routes, so a lesson link opened directly
+      # (or refreshed) would 404. Serving the app as the 404 page lets the router take over.
+      - name: Make direct links work
+        run: cp dist/index.html dist/404.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
