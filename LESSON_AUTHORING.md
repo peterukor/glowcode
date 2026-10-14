@@ -105,6 +105,10 @@ versus return values).
 Add `walkthrough` to a code block to show a "Walk through code" button that expands the
 step-by-step player in place. Without one, no button appears.
 
+The full guide to writing walkthroughs (events, variable states, every diagram, predictions,
+validation, and the `buildSteps` helper that saves repeating state) is
+[`VISUALIZATION_AUTHORING.md`](./VISUALIZATION_AUTHORING.md). The essentials follow.
+
 Define the walkthrough above the lesson and reuse its `code` in the block, so the two can't
 drift apart (validation also checks they match):
 
@@ -124,8 +128,9 @@ Each step is one **execution event** and records the **state after** it:
 
 Optional extras draw more detail. Use them where they help the lesson, not on every step.
 
-**`calc`** splits an assignment that calculates something into two events on the same line.
-While calculating, `vars` still holds the old value; only the assign step changes it:
+**`calc`** splits an assignment that calculates something into events on the same line:
+an optional `"read"` (look up the values), `"calculate"` and `"assign"`. Until the assign
+step, `vars` still holds the old value:
 
 ```ts
 { line: 3, vars: { age: int(13) }, calc: { target: "age", parts: [{ code: "age", value: "13" }, { code: "+" }, { code: "1" }], result: "14", phase: "calculate" }, note: "…" },

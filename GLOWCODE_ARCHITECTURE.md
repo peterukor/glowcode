@@ -146,42 +146,73 @@ valid entry and drops malformed ones. Other tabs are kept in sync via the `stora
 To move progress to accounts later, replace the store behind `progressState` in
 `useProgress.ts`; components only use the hooks and `progressActions`.
 
-## Future visualization integration
+## Visualization engine
 
-A code example opts in with `walkthrough: Walkthrough` (`src/types/trace.ts`):
+One read-only engine plays every walkthrough: lessons, the playground, the manual and the
+developer showcase. How to write walkthroughs is in
+[`VISUALIZATION_AUTHORING.md`](./VISUALIZATION_AUTHORING.md); this section is how it fits
+together.
 
-```ts
-Walkthrough = { id, title, language, code, visualizations: VisualizationKind[], steps: TraceStep[], ifChain? }
-TraceStep   = { line, vars, output?, note, highlight?, evaluation?, returned?, loopIndex?, ifChain?, calc?, call?, checkpoint? }
-```
+It has three layers, each in its own place:
 
-Design rules that keep this extensible without a giant schema:
+| Layer | Where | Responsibility |
+| --- | --- | --- |
+| A. Execution data | `src/types/trace.ts` | What happened: a `Walkthrough` is code plus a list of `TraceStep` events. Each event holds the full state *after* it (line, variables, output so far) plus focused extensions for the diagram it feeds. |
+| B. Playback controller | `src/walkthrough/controller.ts`, `src/hooks/usePlayback.ts` | Which event is on screen and what the student did at predictions. A pure reducer (`next`, `prev`, `reset`, `check`, `reveal`) and `viewPlayback()`, which derives everything a screen needs. The hook adds optional autoplay. |
+| C. Renderers | `src/visualizations/`, `src/components/walkthrough/` | Draw one event. `WalkthroughPlayer` lays out code, output, diagram and explanation; `ExampleVisualization` picks the renderer for a view. Renderers receive data and never interpret code. |
 
-- **One step = one small execution event.** A line can appear in many steps (loops) and one line
-  can take several steps (`age = age + 1` is "evaluate `age + 1` → 13 + 1 → 14", then "assign").
-- **Before/after state** comes from consecutive steps: `vars` is the state after the step.
-- **Core fields stay small; each visualization adds its own optional payload.** The conditional
-  flow tree already works this way (`ifChain` structure on the walkthrough + `ifChain` results
-  on each step, including short-circuited comparisons). Function-call diagrams (arguments →
-  name → return / printed / mutated / `None`) and loop iteration views should follow the same
-  pattern. `calc` (old value → operation → result → assignment) and `call` (inputs →
-  function → returns / prints / changes → stored in) are drawn by `CalculationView` and
-  `FunctionView`; the conditional flow uses `ifChain`; loops use `loopItems` + `loopIndex`.
-- **Predictions are data, not a separate player.** A step's `checkpoint` makes the player
-  stop on the previous step (`usePlayback`'s `isBlocked`), ask, and reveal on request.
-  Answers live in the player's state while it's open; they aren't saved to progress.
-- **Diagrams keep their shape.** Within one call, calculation or if-chain, every part is
-  drawn from the first step; steps only change what glows (`data-on` / `data-look`).
-- Visualization components live in `src/visualizations/` and receive data; they never contain
-  lesson content.
+**Events, not lines.** A step is one execution event. `count = count + 2` is three events on
+line 2 (read the value, calculate, rebind); a loop revisits its lines; `linePosition()` tells
+the student when the line didn't simply move on.
 
-`WalkthroughPlayer` (`src/components/walkthrough/`) is the one read-only player, used by both
-the playground and lessons: Previous / Next / Reset first, optional autoplay and speed; code with
-line numbers, the current line highlighted and its position ("Running line 3 · same line,
-next step"), plus the printed output, on the left; a value a step returns (`returned`) is shown
-as its own "Returned" chip, never mixed into printed output; the visualization,
-the evaluation chain and the explanation on the right; a variables card under non-variable views.
-Arrow keys step through. It never edits or runs code.
+**Deterministic screens.** Every event carries complete state, and the screen is derived from
+`walkthrough.steps[index]` plus checkpoint records. Nothing accumulates while stepping, so
+Previous, Next and Reset always reproduce the same picture; tests compare the markup.
+
+**Focused extensions, explicit active state.** Each diagram reads its own extension, and what
+glows is derived from that state, never from note text or line numbers:
+
+| Extension | Shape (on the walkthrough) | State (on each step) | Renderer |
+| --- | --- | --- | --- |
+| variables | | `vars`, `highlight`; reading names come from `calc` | `VariablesPanel` (names → values; "reading", "changed", "was 3") |
+| calculation | | `calc` (`read` / `calculate` / `assign`) | `CalculationView` |
+| function call | | `call` (`call` / `run` / `result` / `assign`) | `FunctionView` (returns, prints and changes in separate slots) |
+| if / elif / else | `ifChain` (branches, `and` / `or` trees with condition ids) | `ifChain.results` (only what Python evaluated) + `at` | `ConditionalFlow` (full tree; `state.ts` derives taken, skipped and short-circuited parts) |
+| for loop | `loopItems` | `loopIndex` | `LoopView` |
+| while loop | `whileLoop` (condition, body, after) | `whileLoop` (`checks`, `at`, `result`) | `WhileLoopView` |
+| collections | | `element` (name + index) | `ListView`, `StringView` |
+| prediction | | `checkpoint` (asked before the step is shown) | `WalkthroughCheckpoint` |
+
+**Full diagram, nothing premature.** Each renderer draws the whole structure from the first
+event and changes only what glows (`data-on`, `data-look`, `data-skipped`). Results appear only
+in the event that produces them: a calculation shows `?` while reading, a call's outputs stay
+`?` until `result`, a while check shows True/False only once checked, and the flowchart marks
+comparisons only once they're in `results`.
+
+**One visual language.** Idle parts stay visible but quiet, active parts share one outline and
+glow (`--viz-active`, `--viz-glow` in `styles.css`), skipped parts are dashed and faded. Every
+state also has a text caption or mark (✓ / ✗, "reading", "now", "check 2"), so nothing relies
+on color. Transitions are short and switch off with `prefers-reduced-motion`. Wide flowcharts
+keep a readable minimum size and scroll sideways in a focusable region on phones.
+
+**Checking walkthroughs.** `validateWalkthrough()` (`src/walkthrough/validate.ts`) checks the
+data itself: structure, views that have their data, notes, values, no change before an assign
+event, stored values that match results, Python's evaluation order and short-circuiting, and
+loop progress. `validateWalkthroughs()` adds app-wide unique ids, and a test runs it over every
+walkthrough (`src/walkthrough/catalog.ts`). `bun run check:python` replays each module-level
+walkthrough against a line-by-line recording of the real run (`src/walkthrough/replay.ts`):
+lines in order, state after every event, calculations, operand values and every condition.
+
+**Developer showcase.** `/dev/visualizations` plays every real walkthrough with the student
+player and shows whether its data validates. It isn't linked from student pages.
+
+**The future editor.** The editable IDE is postponed, not canceled. Renderers already depend
+only on `Walkthrough` / `TraceStep` data, and notes are optional, so a language tracer can feed
+the same player. A Python tracer would record line events (as `scripts/check-python.ts` already
+does) and turn them into steps: `vars` and `output` directly, `calc` for assignments,
+`ifChain` results from evaluated comparisons, `whileLoop` from loop checks, `call` from call and
+return events. `replay.ts` shows how recorded events line up with steps. Java would get its own
+tracer producing the same shape. Nothing in the engine edits or runs code today.
 
 In a lesson, "Walk through code" expands the player **inside the page**, in place of the snippet,
 so the reading position never moves. It breaks out of the ~68ch text width to use the whole
@@ -190,18 +221,14 @@ its own width (a CSS container query), not the window's: side by side when it ha
 40rem, otherwise stacked as code → visualization → console. "Close" collapses it and returns
 focus to the button that opened it.
 
-The playground (`/playground`, `src/data/examples.ts`) keeps the existing demos (variables,
-if/else, elif, and/or, loop, lists, functions). They already use the `Walkthrough` shape, so they
-can move into lessons as those lessons are written.
-
 ### Not supported yet
 
 These need new data or views, so walkthroughs explain them in the note text instead of drawing
 them: nested calls (`print(len(word))` as one diagram), a call stack for functions that call
-functions, `while` loops in the loop view (it shows `for` laps over known items), objects
-shared between two names (aliasing of lists), and the collections view still reads a few
-demo-specific details. The diagrams also don't animate values travelling along arrows; parts
-light up instead.
+functions, objects shared between two names (aliasing of lists), and dictionaries, sets and
+tuples in the collections view. Walkthroughs with functions or `input()` are checked against
+Python by their final state only; the step-by-step replay covers module-level code. The
+diagrams don't animate values travelling along arrows; parts light up instead.
 
 ## Reference manual
 

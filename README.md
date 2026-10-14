@@ -49,7 +49,8 @@ src/
 
 The full explanation is in [GLOWCODE_ARCHITECTURE.md](GLOWCODE_ARCHITECTURE.md). What makes a
 good lesson is in [TEACHING_GUIDELINES.md](TEACHING_GUIDELINES.md), and how to add one, step by
-step, is in [LESSON_AUTHORING.md](LESSON_AUTHORING.md).
+step, is in [LESSON_AUTHORING.md](LESSON_AUTHORING.md), and how to write step-by-step
+walkthroughs is in [VISUALIZATION_AUTHORING.md](VISUALIZATION_AUTHORING.md).
 
 ## Development workflow
 
