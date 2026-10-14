@@ -2,13 +2,18 @@ import type { IfChain, IfChainTrace } from "./conditional";
 import type { Variables } from "./python";
 
 /**
- * One moment of a program run: the "execution event" a walkthrough steps through.
- * Today these are hand-written and verified; a real Python (or Java) tracer only has
- * to produce the same shape.
+ * One execution event: the unit a walkthrough steps through. This file is the contract
+ * between whatever produces events (hand-written, verified walkthroughs today; a language
+ * tracer in a future editor) and the renderers that draw them.
  *
- * Extending it: core fields stay small. Each visualization that needs more detail gets
- * its own optional payload (like `ifChain` below), so adding loops or function-call
- * diagrams later means adding one optional field, not reshaping every step.
+ * A step is an event, not a source line: one line can produce several events (read a
+ * value, calculate, store) and a loop revisits lines. Every field describes the state
+ * *after* the event, so any step can be drawn on its own; that's what makes Previous and
+ * Reset exact.
+ *
+ * Core fields stay small. A diagram that needs more gets its own focused extension
+ * (`calc`, `call`, `ifChain`, `whileLoop`, ...). Renderers derive what glows from these
+ * explicit states; nothing is guessed from the note text or the code.
  */
 export type TraceStep = {
   /** 1-indexed source line being executed. The same line can appear in many steps (loops). */
@@ -17,9 +22,12 @@ export type TraceStep = {
   vars: Variables;
   /** Everything printed so far. */
   output?: string[];
-  /** A short, friendly explanation of what happened. */
-  note: string;
-  /** Variable to emphasize. */
+  /**
+   * A short, friendly explanation of what happened. Every hand-written walkthrough has one
+   * (the validator checks); a future tracer's events may not.
+   */
+  note?: string;
+  /** The variable this event created or changed. */
   highlight?: string;
   /**
    * How an expression was worked out, one stage at a time,
@@ -31,8 +39,14 @@ export type TraceStep = {
    * Shown separately from printed output: returning is not printing.
    */
   returned?: string;
+  /** For-loops: which lap is running (0-based). Equal to the number of items once the loop has ended. */
   loopIndex?: number;
+  /** If-chains: which comparisons Python has evaluated so far, and where it is. */
   ifChain?: IfChainTrace;
+  /** While-loops: how many times the condition has been checked, the latest result, and where Python is. */
+  whileLoop?: WhileLoopTrace;
+  /** One item of a list or string being used, e.g. `word[0]`. */
+  element?: { name: string; index: number };
   /** An assignment that calculates something, split into "work it out" and "store it". */
   calc?: CalcEvent;
   /** A function or method call: what goes in, and what comes out (returned, printed, changed). */
@@ -45,9 +59,11 @@ export type TraceStep = {
 };
 
 /**
- * `total = total + 1` happens in two events on the same line:
- * - "calculate": Python works out the right side. Variables still hold their old values.
- * - "assign": the name now refers to the result.
+ * `total = total + 1` is several events on the same line:
+ * - "read" (optional): Python looks up the current values of the names on the right.
+ * - "calculate": Python works out the right side. Variables still refer to their old values.
+ * - "assign": the name on the left now refers to the result.
+ * Short walkthroughs can skip "read"; the calculation already shows the values used.
  */
 export type CalcEvent = {
   /** The name on the left of `=`. */
@@ -58,7 +74,26 @@ export type CalcEvent = {
   parts: { code: string; value?: string }[];
   /** The value the right side works out to, as Python would write it. */
   result: string;
-  phase: "calculate" | "assign";
+  phase: "read" | "calculate" | "assign";
+};
+
+/** The shape of a `while` loop, drawn as: condition → (True) body → back to the condition; (False) → after. */
+export type WhileLoopShape = {
+  /** As written after `while`, e.g. "count <= 3". */
+  condition: string;
+  /** The loop body's lines, as written (without indentation). */
+  body: string[];
+  /** The first line after the loop, if there is one. */
+  after?: string;
+};
+
+/** Where execution is in a while loop. */
+export type WhileLoopTrace = {
+  /** How many times the condition has been checked so far (1 = the first check). */
+  checks: number;
+  at: "check" | "body" | "exit";
+  /** The result of the latest check. Only set once Python has evaluated it. */
+  result?: boolean;
 };
 
 /**
@@ -117,6 +152,8 @@ export type Walkthrough = {
   ifChain?: IfChain;
   /** The items a `for` loop goes through, for the loop visualization. */
   loopItems?: (string | number)[];
+  /** Structure of the `while` loop in `code`, for the loop visualization. */
+  whileLoop?: WhileLoopShape;
 };
 
 /** A playground demo: a walkthrough plus a chip icon. */
