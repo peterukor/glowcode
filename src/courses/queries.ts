@@ -6,7 +6,7 @@ import { getReference } from "@/references/registry";
 import type { Walkthrough } from "@/types/trace";
 import { referencesIn } from "./richText";
 import type { ActivityBlock, Block, Chapter, Course, Lesson, RichText } from "./types";
-import { validateWalkthrough } from "./validateWalkthrough";
+import { validateWalkthrough } from "@/walkthrough/validate";
 
 export type LessonEntry = { lesson: Lesson; chapter: Chapter };
 

@@ -1,5 +1,5 @@
 import { referencesIn } from "@/courses/richText";
-import { validateWalkthrough } from "@/courses/validateWalkthrough";
+import { validateWalkthrough } from "@/walkthrough/validate";
 import type { ReferenceCategory, ReferenceEntry, ReferenceScope } from "./types";
 
 const SCOPES: ReferenceScope[] = ["concept", "python", "java"];
