@@ -2,17 +2,7 @@ import { CircleCheck, CircleX, Eye, RotateCcw } from "lucide-react";
 import { useId, useState, type Ref } from "react";
 import { RichTextView } from "@/components/lesson/RichTextView";
 import type { Checkpoint } from "@/types/trace";
-
-/** What the student did at one checkpoint. Kept by the player so stepping back and forth keeps it. */
-export type CheckpointRecord = {
-  /** Wrong choices already tried, in order. */
-  ruledOut: string[];
-  correct: boolean;
-  /** The student moved past the checkpoint (after answering, or by choosing to skip). */
-  revealed: boolean;
-};
-
-export const emptyRecord: CheckpointRecord = { ruledOut: [], correct: false, revealed: false };
+import type { CheckpointRecord } from "./checkpointRecord";
 
 const DEFAULT_WRONG = "Not quite. Look at the highlighted line and the values Python has right now, then try again.";
 

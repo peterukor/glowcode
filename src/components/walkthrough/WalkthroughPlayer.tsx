@@ -8,7 +8,8 @@ import { CalculationView } from "@/visualizations/CalculationView";
 import { ExampleVisualization } from "@/visualizations/ExampleVisualization";
 import { visualizationLabels } from "@/visualizations/labels";
 import { TypeLegend, VariablesPanel } from "@/visualizations/VariableBox";
-import { CheckpointQuestion, CheckpointRecap, emptyRecord, type CheckpointRecord } from "./WalkthroughCheckpoint";
+import { emptyRecord, type CheckpointRecord } from "./checkpointRecord";
+import { CheckpointQuestion, CheckpointRecap } from "./WalkthroughCheckpoint";
 
 /**
  * The step-by-step player used by both the playground and lessons:
