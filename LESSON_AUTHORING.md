@@ -149,10 +149,16 @@ Phases: `call` (arguments go in), `run` (the body runs), `result` (outputs appea
 { … call: { name: "append", receiver: "items", args: ['"apple"'], changes: '["apple"]', returns: "None", phase: "result" } }
 ```
 
-For the `function` view, list `"function"` in `visualizations`. For loops, set `loopItems` on
-the walkthrough and `loopIndex` on each step (a value equal to the number of items means the
-loop has ended). For if/elif/else, set `ifChain` on the walkthrough and on each step; see the
-playground examples in `src/data/examples.ts`.
+For the `function` view, list `"function"` in `visualizations`. For `for` loops, set
+`forLoop` on the walkthrough (the iterable and the body) and on each step (`next`, `assign`,
+`body`, `exit`); for `while` loops, `whileLoop`. For if/elif/else, set `ifChain` on the
+walkthrough and on each step. Lists, tuples, dicts and sets go in the `collections` view
+(mark indexes, slices, changes and `in` tests on the step), and functions that call
+functions in the `stack` view. Before writing one from scratch, look for a ready-made
+walkthrough: the playground examples in `src/data/examples.ts` and the Python visualization
+demos in `src/data/pythonVisuals.ts` (shared lists, precedence, list changes, every kind of
+`for` loop, strings, dicts, sets, nested calls, the call stack) can be reused as they are when
+your code block matches. `VISUALIZATION_AUTHORING.md` covers every field.
 
 **`checkpoint`** asks for a prediction **before** a step is shown. The player stops on the
 previous step and Next waits until the student answers (or chooses to skip):
@@ -329,7 +335,8 @@ walkthrough problems (steps on lines that don't exist, printed output that disap
 steps, predictions without a right answer).
 
 `check:python` (in `scripts/check-python.ts`, also run by CI) runs your code in `python3` and
-fails if a code block's `output`, a walkthrough's final output or variables, a debug
+fails if a code block's `output`, a walkthrough's steps (replayed event by event, including
+inside functions), final output or variables, a debug
 question's `errorOutput`, or a predict question's answer doesn't match what Python actually
 does. Neither check can tell whether your explanations are right; that part is your job.
 

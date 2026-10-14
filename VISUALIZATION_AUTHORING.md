@@ -37,13 +37,19 @@ changed, and everything else carries forward:
 
 | Field | Meaning |
 | --- | --- |
-| `set: { count: py.int(5) }` | variables this event creates or changes (`py.int`, `py.float`, `py.str`, `py.bool`, `py.list`, `py.none`) |
+| `set: { count: py.int(5) }` | variables this event creates or changes (`py.int`, `py.float`, `py.str`, `py.bool`, `py.list`, `py.tuple`, `py.dict`, `py.set`, `py.none`) |
 | `unset: ["person"]` | variables that stop existing (a function's locals after it returns) |
 | `print: ["5"]` | lines this event prints (a call's `prints` are added automatically when it shows its result) |
 
 The one variable an event changes is highlighted automatically. The player shows variables as
 names that refer to values, with words for what's happening: **reading** while an event looks
 a value up, **changed** plus "was 3" when an event rebinds a name.
+
+Collections take an optional object id as their second argument: `py.list([1, 2], "a")`.
+Give two names the same id when they refer to one object (`b = a`) and different ids for a
+copy (`c = a.copy()`). The diagrams draw shared names as two arrows into one object, and
+`check:python` compares the ids with Python's `id()`. Dicts are written as entries,
+`py.dict([["ada", 36]])`, in insertion order; sets in the order Python iterates them.
 
 You can also write full `TraceStep` objects (`vars`, `output`). That's the format a future
 tracer will produce; `buildSteps` only fills it in for you.
@@ -57,9 +63,10 @@ When the main view isn't `variables`, the variables still appear in a card below
 | --- | --- | --- |
 | `variables` | assignment and reassignment | nothing extra |
 | `flow` | if / elif / else, `and` / `or` | `ifChain` on the walkthrough and on steps |
-| `loop` | `for` over a list, or `while` | `loopItems` + `loopIndex`, or `whileLoop` on both |
-| `function` | built-in and user-defined calls, methods | `call` on the steps that call something |
-| `collections` | lists and strings, indexing | lists / strings in `vars`; `element` to mark an item |
+| `loop` | `for` over any iterable, or `while` | `forLoop` or `whileLoop` on the walkthrough and on steps (the older `loopItems` + `loopIndex` still work) |
+| `function` | built-in and user-defined calls, methods, nested calls | `call` on the steps that call something |
+| `collections` | lists, tuples, dicts, sets, indexed strings; mutation and shared objects | collections in `vars`; `element`, `slice`, `mutation`, `membership` to mark what an event does |
+| `stack` | user-defined functions calling each other | `frame` and `callers` on the steps inside a function |
 
 An empty list shows just the code and the printed output.
 
@@ -75,11 +82,13 @@ state, and the renderer derives what glows from it:
   need no value. Before `"assign"`, the variable must still hold its old value.
 - **Conditionals:** `ifChain.results` lists the comparisons Python has evaluated, and `at`
   says where execution is (see section 6).
-- **Loops:** `loopIndex` is the lap (equal to the number of items once the loop ends);
-  `whileLoop: { checks, at, result }` is the check count, where execution is (`"check"`,
-  `"body"`, `"exit"`) and the latest result.
+- **For loops:** `forLoop: { at, index, bodyLine }` (section 12).
+- **While loops:** `whileLoop: { checks, at, result, bodyLine }` is the check count, where
+  execution is (`"check"`, `"body"`, `"exit"`), the latest result and the body line running.
 - **Calls:** `call.phase` (section 8).
-- **Collections:** `element: { name, index }` marks the item an event uses.
+- **Collections:** `element`, `slice`, `mutation` and `membership` (section 13).
+- **Expression trees:** `calc.tree`, `calc.active`, `calc.done` (section 14).
+- **Call stack:** `frame` and `callers` (section 15).
 
 Results only appear in the event that produces them, so the full diagram never gives away
 what happens next.
@@ -128,6 +137,10 @@ output and changes to an object are separate slots, because they are different t
 { name: "append", receiver: "items", receiverValue: "['pen']", args: ['"apple"'], changes: "['pen', 'apple']", returns: "None", phase: "result" }
 ```
 
+For user-defined functions add `params: ["a", "b"]` (matched to `args` by position). For a
+call nested in another, `print(len("hello"))`, give the inner call `feeds: "print()"` and the
+outer call `argFrom: { 0: "len()" }`, and write the inner call's events first.
+
 Phases: `"call"` (arguments go in), `"run"` (a user-defined function's body runs), `"result"`
 (outputs appear; before this they show `?`), `"assign"` (the returned value is stored in
 `assignTo`). Leave out slots that don't apply, or that the lesson isn't ready for (print's
@@ -142,9 +155,12 @@ Phases: `"call"` (arguments go in), `"run"` (a user-defined function's body runs
   wouldn't evaluate (or that it would skip), loop checks going backwards, and predictions
   without a correct choice.
 - `bun run check:python` replays the walkthrough in real Python: which lines run and in what
-  order, the variables and output after every event, each calculation and the values it
-  used, and every condition you said was True or False. Walkthroughs with functions or
-  `input()` are checked by their final state.
+  order (inside functions and generators too), the variables and output after every event,
+  which names share one object, every frame's variables on the call stack, each calculation
+  and expression-tree node, every membership test, and every condition you said was True or
+  False. Part-way through a line, each variable may show its value from before or after
+  the line (pop has removed the item, `last` isn't assigned yet), but nothing else.
+  Walkthroughs with `input()`, classes or imports are checked by their final state.
 - Open `/dev/visualizations?w=<id>` and step through it, including back and Reset, on a
   narrow window too.
 
@@ -154,9 +170,10 @@ Phases: `"call"` (arguments go in), `"run"` (a user-defined function's body runs
    extension to `src/types/trace.ts`: structure on `Walkthrough` (drawn from the first
    event), per-event state on `TraceStep`.
 2. Write the renderer in `src/visualizations/`. It takes data and draws the **whole**
-   structure every time, marking the active parts with `data-on` (and `data-skipped`). Use the
-   shared classes (`viz-node`, `viz-edge`, `viz-caption`) so it matches the others, give every
-   state a text label, and don't reveal results the current event hasn't produced.
+   structure every time as SVG inside a `.flow` wrapper, so it uses the flow tree's parts
+   (section 16). Mark state with `data-look` (`idle`, `lit`, `true`, `false`, `done`, `dim`),
+   give every state words as well as a glow (and an `sr-only` summary), and don't reveal
+   results the current event hasn't produced.
 3. Add a `VisualizationKind` and a case in `ExampleVisualization`, plus a label in
    `labels.ts`.
 4. Teach the validator the new extension's rules, and `replay.ts` how to check it against
@@ -168,9 +185,88 @@ Phases: `"call"` (arguments go in), `"run"` (a user-defined function's body runs
 The editable IDE is a future phase. When it comes, a language tracer will produce the same
 `Walkthrough` / `TraceStep` data, and the player and renderers will draw it unchanged. Notes
 are optional for that reason. `scripts/check-python.ts` already records Python line events
-(state before each line), and `src/walkthrough/replay.ts` shows how those events line up with
+(state before each line, in the main program, functions and generators, with every frame and
+the `id()` of each collection), and `src/walkthrough/replay.ts` shows how those events line up with
 steps; a tracer turns them into steps directly, adding `calc`, `ifChain`, `whileLoop` and
 `call` from what it observes. Nothing in the engine assumes a person wrote the trace.
+
+## 12. For loops
+
+Describe the loop once on the walkthrough:
+
+```ts
+forLoop: { target: "number", iterable: "numbers", kind: "list", items: [10, 20, 30], body: ["print(number)"], after: 'print("done")' }
+```
+
+`kind` is `list`, `tuple`, `str`, `range`, `dict` (items are the keys), `set` (items in the
+order this run produced) or `generator` (values are shown as `?` until produced). Each lap is
+three or more events, with `forLoop: { at, index }` on each:
+
+| `at` | Line | What students see |
+| --- | --- | --- |
+| `"next"` | the `for` line | "Next item available?" answers Yes; item `index` lifts out of the iterable and travels to the question |
+| `"assign"` | the `for` line | the value travels into the loop variable; the step's `vars` hold it |
+| `"body"` + `bodyLine` | a body line | the item settles back in place; that body line glows |
+| `"exit"` | the `for` line (and the line after) | the answer is No; the way out glows; every item is ticked |
+
+For a generator, the generator's own lines run between `"next"` and `"assign"`: give those
+steps `frame` / `callers` (they run in the generator) and keep `forLoop` at `"next"`. The
+final ask uses `index` equal to the number of items before `"exit"`.
+
+The iterable shows at most five items and slides so the current one stays in view, with "…"
+only on a side where items are hidden. You never choose the window; it is derived.
+
+## 13. Collections: indexes, slices, changes, shared objects
+
+- `element: { name, index }` marks the item an event uses; negative indexes show the
+  counting from the end. For dicts, `element: { name, key }`.
+- `slice: { name, start, stop }` selects `start` to `stop - 1` and labels start and stop.
+- `mutation: { name, kind, index?, key?, value?, removed? }` says the object changed in place
+  (`append`, `insert`, `set`, `pop`, `remove`, `add`, `discard`, `set-key`, `delete-key`). The
+  validator works out the new value from the old one and checks the object id stayed the same.
+- `membership: { name, value, result }` is an `in` test; the validator checks the result.
+
+For `x = items.pop()`, write three events on one line: the call (with `element` on the last
+item), the item leaving (`mutation` of kind `pop` with `removed`, `call.phase: "result"`), and
+the assignment (`call.phase: "assign"`), which shows the returned value separately.
+
+Strings appear in the collections view only when the walkthrough indexes or slices them;
+other strings stay in the variables view.
+
+## 14. Expression trees
+
+For a calculation with more than one operator, add `calc.tree`: operands are
+`{ id, code, value? }`, operators `{ id, code, op, left, right }`, and each node's `code` is
+valid Python (`"3 * 2"`). Work it out one operator per event: `active` is the operator being
+worked out and `done` holds the results so far, `{ mul: "6" }`. The validator checks that
+children are worked out before their parent and that the root equals `result`;
+`check:python` evaluates every node.
+
+## 15. The call stack
+
+Steps that run inside a function say so: `frame: "add_one"`, with `vars` holding only that
+call's variables, and `callers` listing the frames waiting for it, main program first:
+`[{ name: "<module>", vars: {}, calling: "double(4)" }, { name: "double", vars: { n: 4 }, calling: "add_one(n)" }]`.
+The stack view stacks the frames newest first, draws "calls …" between them, a "returns …"
+arrow when the top frame returns, and leaves a finished frame as a faded outline for one
+step. Back in the caller, the step has no `frame` (or the caller's).
+
+## 16. How diagrams are drawn
+
+Every diagram sits on the dark **stage** (`.viz-stage`), in both themes, so glows read
+clearly; it uses the dark-theme tokens. Diagrams are SVG built from the flow tree's parts
+(`src/visualizations/conditional/ConditionalFlow.tsx`, styled under `.flow` in `styles.css`):
+code boxes (`flow-block`), frames with a folder tab (`flow-frame`), routed connectors with
+rounded corners (`flow-edge`, with an arrowhead from `arrowHead`), pills on lines
+(`flow-label`), a decision diamond (`flow-decision`), and the travelling value
+(`loop-chip`). Geometry helpers live in `src/visualizations/flow/geometry.ts`; the loop
+layout in `src/visualizations/loops/loopLayout.ts` is pure and testable.
+
+Looks are shared: `lit` (what Python is doing now: glows, with a moving sparkle on lines),
+`true` / `false` (a decision's answer), `done` (ran earlier: solid, quietly violet), `dim`
+(skipped: dashed and faded), `idle`. Motion explains a state change (a value travelling, an
+item lifting out, a frame leaving), uses the `--ease-out` / `--ease-in-out` curves, and is
+replaced by a fade under reduced motion.
 
 ## A complete example
 

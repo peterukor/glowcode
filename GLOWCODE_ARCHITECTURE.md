@@ -174,13 +174,15 @@ glows is derived from that state, never from note text or line numbers:
 
 | Extension | Shape (on the walkthrough) | State (on each step) | Renderer |
 | --- | --- | --- | --- |
-| variables | | `vars`, `highlight`; reading names come from `calc` | `VariablesPanel` (names → values; "reading", "changed", "was 3") |
-| calculation | | `calc` (`read` / `calculate` / `assign`) | `CalculationView` |
-| function call | | `call` (`call` / `run` / `result` / `assign`) | `FunctionView` (returns, prints and changes in separate slots) |
+| variables | | `vars`, `highlight`; reading names come from `calc` | `VariablesPanel` (names → values; "reading", "changed", "was 3", "changed in place"; names sharing an object drawn together) |
+| calculation | | `calc` (`read` / `calculate` / `assign`; `tree`, `active`, `done` for precedence) | `CalculationView` (an SVG expression tree when `tree` is set) |
+| function call | | `call` (`call` / `run` / `result` / `assign`; `params`, `argFrom`, `feeds` for nested calls) | `FunctionView` (SVG flow: inputs → function → returns, prints and changes in separate slots) |
 | if / elif / else | `ifChain` (branches, `and` / `or` trees with condition ids) | `ifChain.results` (only what Python evaluated) + `at` | `ConditionalFlow` (full tree; `state.ts` derives taken, skipped and short-circuited parts) |
-| for loop | `loopItems` | `loopIndex` | `LoopView` |
-| while loop | `whileLoop` (condition, body, after) | `whileLoop` (`checks`, `at`, `result`) | `WhileLoopView` |
-| collections | | `element` (name + index) | `ListView`, `StringView` |
+| for loop | `forLoop` (target, iterable, kind, items, body, after) | `forLoop` (`next` / `assign` / `body` / `exit`, `index`, `bodyLine`) | `ForLoopView` (SVG flowchart joined to the iterable; the picked value travels) |
+| while loop | `whileLoop` (setup, condition, body, after) | `whileLoop` (`checks`, `at`, `result`, `bodyLine`) | `WhileLoopView` (same flowchart parts) |
+| older for loops | `loopItems` | `loopIndex` | `LoopView` |
+| collections | | `element`, `slice`, `mutation`, `membership`; object ids in `vars` | `CollectionsView` (SVG: name tags with arrows into lists, tuples, dicts, sets) |
+| call stack | | `frame`, `callers` | `CallStackView` (stacked frame cards, call and return arrows) |
 | prediction | | `checkpoint` (asked before the step is shown) | `WalkthroughCheckpoint` |
 
 **Full diagram, nothing premature.** Each renderer draws the whole structure from the first
@@ -189,19 +191,27 @@ in the event that produces them: a calculation shows `?` while reading, a call's
 `?` until `result`, a while check shows True/False only once checked, and the flowchart marks
 comparisons only once they're in `results`.
 
-**One visual language.** Idle parts stay visible but quiet, active parts share one outline and
-glow (`--viz-active`, `--viz-glow` in `styles.css`), skipped parts are dashed and faded. Every
-state also has a text caption or mark (✓ / ✗, "reading", "now", "check 2"), so nothing relies
-on color. Transitions are short and switch off with `prefers-reduced-motion`. Wide flowcharts
-keep a readable minimum size and scroll sideways in a focusable region on phones.
+**One visual language.** Every diagram sits on one dark stage (`.viz-stage`, the code editor's
+ink, in both themes) and is SVG built from the flow tree's parts: boxes, frames with tabs,
+routed connectors with arrowheads, pills on lines, a decision diamond. Looks are shared
+(`data-look`: `idle`, `lit`, `true`, `false`, `done`, `dim`): what Python is doing glows with a
+moving sparkle, earlier work stays solid, skipped parts are dashed and faded. Every state also
+has words (✓ / ✗, "check 2", "waiting for double(4)", "was 0"), so nothing relies on color.
+Geometry is pure and shared (`src/visualizations/flow/geometry.ts`, `loops/loopLayout.ts`).
+Long sequences show a five-item window derived from the focus (`collectionWindow.ts`). Motion
+explains a change (a value travelling, an item lifting out, a frame leaving), uses strong
+custom curves, and becomes a fade under `prefers-reduced-motion`. Diagrams keep a readable
+minimum size and scroll sideways in a focusable region on narrow phones.
 
 **Checking walkthroughs.** `validateWalkthrough()` (`src/walkthrough/validate.ts`) checks the
 data itself: structure, views that have their data, notes, values, no change before an assign
 event, stored values that match results, Python's evaluation order and short-circuiting, and
 loop progress. `validateWalkthroughs()` adds app-wide unique ids, and a test runs it over every
-walkthrough (`src/walkthrough/catalog.ts`). `bun run check:python` replays each module-level
-walkthrough against a line-by-line recording of the real run (`src/walkthrough/replay.ts`):
-lines in order, state after every event, calculations, operand values and every condition.
+walkthrough (`src/walkthrough/catalog.ts`). `bun run check:python` replays each walkthrough
+against a line-by-line recording of the real run (`src/walkthrough/replay.ts`), including
+inside functions and generators: lines in order, state after every event, which names share
+one object (Python's `id()`), every frame on the call stack, calculations, expression-tree
+nodes, operand values, membership tests and every condition.
 
 **Developer showcase.** `/dev/visualizations` plays every real walkthrough with the student
 player and shows whether its data validates. It isn't linked from student pages.
@@ -209,9 +219,10 @@ player and shows whether its data validates. It isn't linked from student pages.
 **The future editor.** The editable IDE is postponed, not canceled. Renderers already depend
 only on `Walkthrough` / `TraceStep` data, and notes are optional, so a language tracer can feed
 the same player. A Python tracer would record line events (as `scripts/check-python.ts` already
-does) and turn them into steps: `vars` and `output` directly, `calc` for assignments,
-`ifChain` results from evaluated comparisons, `whileLoop` from loop checks, `call` from call and
-return events. `replay.ts` shows how recorded events line up with steps. Java would get its own
+does, with frames and object ids) and turn them into steps: `vars` and `output` directly,
+`calc` for assignments, `ifChain` results from evaluated comparisons, `forLoop` / `whileLoop`
+from loop events, `call`, `frame` and `callers` from call and return events, `mutation` from
+method calls on collections. `replay.ts` shows how recorded events line up with steps. Java would get its own
 tracer producing the same shape. Nothing in the engine edits or runs code today.
 
 In a lesson, "Walk through code" expands the player **inside the page**, in place of the snippet,
@@ -223,12 +234,9 @@ focus to the button that opened it.
 
 ### Not supported yet
 
-These need new data or views, so walkthroughs explain them in the note text instead of drawing
-them: nested calls (`print(len(word))` as one diagram), a call stack for functions that call
-functions, objects shared between two names (aliasing of lists), and dictionaries, sets and
-tuples in the collections view. Walkthroughs with functions or `input()` are checked against
-Python by their final state only; the step-by-step replay covers module-level code. The
-diagrams don't animate values travelling along arrows; parts light up instead.
+Classes and objects, imports, exceptions inside walkthroughs, recursion deeper than a few
+frames, and nested collections (a list inside a list is shown as its printed value). Walkthroughs
+with `input()` are checked against Python by their final state only.
 
 ## Reference manual
 
