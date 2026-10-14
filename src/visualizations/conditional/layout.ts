@@ -17,6 +17,7 @@
  *   [ line after the chain ]
  */
 import type { Condition, IfChain } from "@/types/conditional";
+import { roundedPath, type Box, type Point } from "../flow/geometry";
 
 // All sizes are SVG user units (≈ CSS px at 100% scale).
 const CHAR_W = 8.4; // JetBrains Mono at 14px
@@ -45,10 +46,8 @@ const RAIL_GAP = 24;
 const MERGE_GAP = 44;
 const AFTER_GAP = 40;
 const MARGIN = 20;
-const CORNER = 12;
 
-export type Box = { x: number; y: number; w: number; h: number };
-export type Point = { x: number; y: number };
+export type { Box, Point };
 
 export type FrameNode = { type: "frame"; key: string; keyword: "if" | "elif" | "else"; box: Box; tab: Box };
 
@@ -187,29 +186,6 @@ function layoutCondition(condition: Condition, topLevel: boolean): Laid {
 
 // ---------------------------------------------------------------------------
 // Helpers for the outer flow
-
-/** Orthogonal polyline with rounded corners. */
-function roundedPath(points: Point[], r = CORNER): string {
-  const [first, ...rest] = points;
-  if (!first) return "";
-  let d = `M${first.x} ${first.y}`;
-  for (let i = 0; i < rest.length; i++) {
-    const prev = points[i]!;
-    const cur = rest[i]!;
-    const next = rest[i + 1];
-    if (!next) {
-      d += `L${cur.x} ${cur.y}`;
-      break;
-    }
-    const inLen = Math.hypot(cur.x - prev.x, cur.y - prev.y);
-    const outLen = Math.hypot(next.x - cur.x, next.y - cur.y);
-    const rr = Math.min(r, inLen / 2, outLen / 2);
-    const a = { x: cur.x - (Math.sign(cur.x - prev.x) * rr), y: cur.y - (Math.sign(cur.y - prev.y) * rr) };
-    const b = { x: cur.x + (Math.sign(next.x - cur.x) * rr), y: cur.y + (Math.sign(next.y - cur.y) * rr) };
-    d += `L${a.x} ${a.y}Q${cur.x} ${cur.y} ${b.x} ${b.y}`;
-  }
-  return d;
-}
 
 const tabWidth = (keyword: string) => keyword.length * CHAR_W + TAB_PAD_X * 2;
 
