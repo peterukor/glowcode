@@ -4,7 +4,8 @@ import { usePanelPrefs } from "@/progress/useProgress";
 import { Drawer } from "../Drawer";
 
 /**
- * Three columns on wide screens (≥1280px): course contents | lesson | Ask Glow.
+ * Three columns on wide screens (≥1280px): contents | reading column | Ask Glow.
+ * Used by lessons (course contents) and the reference manual (reference contents).
  * Each side panel collapses to a slim rail independently, and the reading column grows
  * to fill the space. The choice is remembered. Below 1280px both panels become drawers.
  */
@@ -12,11 +13,14 @@ export function LessonLayout({
   contents,
   assistant,
   children,
+  contentsLabel = "Course contents",
 }: {
   /** Receives a callback that closes the mobile drawer after navigating. */
   contents: (onNavigate?: () => void) => ReactNode;
   assistant: ReactNode;
   children: ReactNode;
+  /** What the left panel holds, for its landmark and buttons ("Course contents", "Reference contents"). */
+  contentsLabel?: string;
 }) {
   const [prefs, setPrefs] = usePanelPrefs();
   const [drawer, setDrawer] = useState<"contents" | "assistant" | null>(null);
@@ -29,13 +33,13 @@ export function LessonLayout({
   return (
     <div className="lesson-shell" style={columns}>
       {/* LEFT: course contents (wide screens) */}
-      <aside className="lesson-panel lesson-panel-left" aria-label="Course contents" data-open={prefs.contentsOpen || undefined}>
+      <aside className="lesson-panel lesson-panel-left" aria-label={contentsLabel} data-open={prefs.contentsOpen || undefined}>
         {prefs.contentsOpen ? (
           <div id="contents-panel" className="panel-body">
             <button
               type="button"
               className="icon-btn absolute right-3 top-3 z-10"
-              aria-label="Hide course contents"
+              aria-label={`Hide ${contentsLabel.toLowerCase()}`}
               aria-expanded="true"
               aria-controls="contents-panel"
               onClick={() => setPrefs({ contentsOpen: false })}
@@ -90,7 +94,7 @@ export function LessonLayout({
       </aside>
 
       {/* Drawers for smaller screens */}
-      <Drawer open={drawer === "contents"} onClose={() => setDrawer(null)} side="left" title="Course contents">
+      <Drawer open={drawer === "contents"} onClose={() => setDrawer(null)} side="left" title={contentsLabel}>
         {contents(() => setDrawer(null))}
       </Drawer>
       <Drawer open={drawer === "assistant"} onClose={() => setDrawer(null)} side="right" title="Ask Glow">

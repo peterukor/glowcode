@@ -1,6 +1,7 @@
-import { createRootRoute, HeadContent, Link, Outlet, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { createRootRoute, HeadContent, Link, Outlet, useLocation, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
+import { useMemo, type ReactNode } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
+import { nextOrigin, parseOrigin, ReferenceNavigationContext, type ReferenceNavigation } from "@/references/navigation";
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -18,10 +19,33 @@ function RootLayout() {
       </a>
       <SiteHeader />
       <main id="main-content" tabIndex={-1} className="outline-none">
-        <Outlet />
+        <ReferenceNavigationProvider>
+          <Outlet />
+        </ReferenceNavigationProvider>
       </main>
     </>
   );
+}
+
+/**
+ * Makes every "See more" and related-entry link a client-side navigation that remembers the
+ * lesson the student came from (see `nextOrigin`), so "Back to lesson" can return them to it.
+ */
+function ReferenceNavigationProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const location = useLocation();
+  const value = useMemo<ReferenceNavigation>(() => {
+    const search = nextOrigin(location.pathname, parseOrigin(location.search as Record<string, unknown>));
+    const target = (id: string) => ({ to: "/reference/$entryId" as const, params: { entryId: id }, search });
+    return {
+      hrefFor: (id) => router.buildLocation(target(id)).href,
+      open: (id) => {
+        void router.navigate(target(id));
+        return true;
+      },
+    };
+  }, [router, location.pathname, location.search]);
+  return <ReferenceNavigationContext.Provider value={value}>{children}</ReferenceNavigationContext.Provider>;
 }
 
 function CenteredMessage({ title, body, children }: { title: string; body: string; children: ReactNode }) {

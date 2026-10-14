@@ -20,19 +20,24 @@ function useTheme() {
 
 export function SiteHeader() {
   const { dark, toggle } = useTheme();
-  const link = "rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground";
-  const active = { className: "rounded-full px-4 py-2 text-sm font-semibold bg-secondary text-secondary-foreground" };
+  // Tighter on phones so four items fit in 360px.
+  const size = "rounded-full px-2.5 py-2 text-[13px] font-semibold sm:px-4 sm:text-sm";
+  const link = `${size} text-muted-foreground transition-colors hover:text-foreground`;
+  const active = { className: `${size} bg-secondary text-secondary-foreground` };
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-lg">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-5">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-5">
         <Link to="/" className="flex shrink-0 items-center" aria-label="Glowcode home">
-          <img src="/brand/glowcode-icon.png" alt="" className="h-10 w-10 sm:hidden" />
+          <img src="/brand/glowcode-icon.png" alt="" className="h-9 w-9 sm:hidden" />
           <img src="/brand/glowcode-wordmark.png" alt="Glowcode" className="hidden h-9 w-auto sm:block" />
         </Link>
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-0.5 sm:gap-1">
           <Link to="/courses" className={link} activeProps={active}>
             Courses
+          </Link>
+          <Link to="/reference" className={link} activeProps={active}>
+            Reference
           </Link>
           <Link to="/playground" className={link} activeProps={active}>
             Playground
@@ -40,7 +45,7 @@ export function SiteHeader() {
           <button
             onClick={toggle}
             aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-            className="ml-1 grid h-10 w-10 place-items-center rounded-full border-2 transition-colors hover:border-primary"
+            className="ml-1 grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 transition-colors hover:border-primary sm:h-10 sm:w-10"
           >
             {dark ? <Sun className="h-4 w-4 text-sun" /> : <Moon className="h-4 w-4 text-grape" />}
           </button>

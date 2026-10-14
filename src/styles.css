@@ -832,10 +832,46 @@
 }
 
 /* Reference terms: dotted underline, definition on hover / focus / tap. */
-.ref {
-  position: relative;
-  display: inline;
+/* ------------------------------------------------------------ manual */
+.reference-section {
+  margin-top: 2.5rem;
 }
+.lesson-prose > .entry-list {
+  list-style: none;
+  padding-left: 0;
+  max-width: none;
+}
+.outcome-returns {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+}
+.outcome-returns > p:first-child {
+  color: var(--color-grape-ink);
+}
+.outcome-prints {
+  border-color: var(--code-bg);
+  background: var(--code-bg);
+  color: var(--code-fg);
+}
+.outcome-prints > p:first-child {
+  color: var(--code-line);
+}
+.outcome-prints .inline-code {
+  background: color-mix(in srgb, var(--code-fg) 14%, transparent);
+  color: var(--code-fg);
+}
+.outcome-changes {
+  border-color: color-mix(in srgb, var(--t-list) 50%, transparent);
+  background: color-mix(in srgb, var(--t-list) 6%, var(--card));
+}
+.ref-nav a[aria-current="page"] {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+/* Reference terms: a dotted underline marks a word that explains itself. */
 .ref-term {
   font: inherit;
   color: inherit;
@@ -843,30 +879,37 @@
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
   cursor: help;
+  border-radius: 0.25rem;
 }
-.ref-tip {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 8px);
-  z-index: 30;
-  display: none;
+.ref-term:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+/* Inside code: keep the syntax colour, just a lighter underline. */
+.ref-term-code {
+  text-decoration-color: color-mix(in srgb, var(--sun) 70%, transparent);
+  text-underline-offset: 3px;
+}
+.ref-term-code:hover,
+.ref-term-code[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--sun) 18%, transparent);
+}
+/* The card is fixed-position in a portal, so it never pushes text around. */
+.ref-card {
+  position: fixed;
+  z-index: 60;
   width: max-content;
-  max-width: 17rem;
-  transform: translateX(-50%);
+  max-width: min(18rem, calc(100vw - 16px));
   border: 2px solid var(--border);
   border-radius: 1rem;
   background: var(--card);
+  color: var(--foreground);
   padding: 0.75rem 0.9rem;
+  box-shadow: 0 14px 34px -14px color-mix(in srgb, var(--foreground) 40%, transparent);
   text-align: left;
-  font-weight: 400;
-  line-height: 1.45;
-  box-shadow: var(--shadow-soft);
-}
-.ref:hover .ref-tip,
-.ref:focus-within .ref-tip,
-.ref[data-open] .ref-tip {
-  display: block;
-  animation: pop-in 0.2s ease-out both;
+  white-space: normal;
+  font-family: var(--font-sans, inherit);
+  animation: pop-in 0.16s ease-out both;
 }
 
 /* Native <dialog> drawers (mobile course contents / Ask Glow). */
@@ -934,7 +977,7 @@
   .panel-body,
   .drawer[open],
   .walkthrough-inline,
-  .ref-tip {
+  .ref-card {
     transition: none !important;
     animation: none !important;
   }

@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PlaygroundRouteImport } from './routes/playground'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReferenceIndexRouteImport } from './routes/reference.index'
 import { Route as CoursesIndexRouteImport } from './routes/courses.index'
+import { Route as ReferenceEntryIdRouteImport } from './routes/reference.$entryId'
 import { Route as CoursesCourseIdIndexRouteImport } from './routes/courses.$courseId.index'
 import { Route as CoursesCourseIdLessonIdRouteImport } from './routes/courses.$courseId.$lessonId'
 
@@ -25,9 +27,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReferenceIndexRoute = ReferenceIndexRouteImport.update({
+  id: '/reference/',
+  path: '/reference/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CoursesIndexRoute = CoursesIndexRouteImport.update({
   id: '/courses/',
   path: '/courses/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferenceEntryIdRoute = ReferenceEntryIdRouteImport.update({
+  id: '/reference/$entryId',
+  path: '/reference/$entryId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoursesCourseIdIndexRoute = CoursesCourseIdIndexRouteImport.update({
@@ -45,6 +57,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/playground': typeof PlaygroundRoute
   '/courses/': typeof CoursesIndexRoute
+  '/reference/': typeof ReferenceIndexRoute
+  '/reference/$entryId': typeof ReferenceEntryIdRoute
   '/courses/$courseId/': typeof CoursesCourseIdIndexRoute
   '/courses/$courseId/$lessonId': typeof CoursesCourseIdLessonIdRoute
 }
@@ -52,6 +66,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/playground': typeof PlaygroundRoute
   '/courses': typeof CoursesIndexRoute
+  '/reference': typeof ReferenceIndexRoute
+  '/reference/$entryId': typeof ReferenceEntryIdRoute
   '/courses/$courseId': typeof CoursesCourseIdIndexRoute
   '/courses/$courseId/$lessonId': typeof CoursesCourseIdLessonIdRoute
 }
@@ -60,6 +76,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/playground': typeof PlaygroundRoute
   '/courses/': typeof CoursesIndexRoute
+  '/reference/': typeof ReferenceIndexRoute
+  '/reference/$entryId': typeof ReferenceEntryIdRoute
   '/courses/$courseId/': typeof CoursesCourseIdIndexRoute
   '/courses/$courseId/$lessonId': typeof CoursesCourseIdLessonIdRoute
 }
@@ -69,6 +87,8 @@ export interface FileRouteTypes {
     | '/'
     | '/playground'
     | '/courses/'
+    | '/reference/'
+    | '/reference/$entryId'
     | '/courses/$courseId/'
     | '/courses/$courseId/$lessonId'
   fileRoutesByTo: FileRoutesByTo
@@ -76,6 +96,8 @@ export interface FileRouteTypes {
     | '/'
     | '/playground'
     | '/courses'
+    | '/reference'
+    | '/reference/$entryId'
     | '/courses/$courseId'
     | '/courses/$courseId/$lessonId'
   id:
@@ -83,6 +105,8 @@ export interface FileRouteTypes {
     | '/'
     | '/playground'
     | '/courses/'
+    | '/reference/'
+    | '/reference/$entryId'
     | '/courses/$courseId/'
     | '/courses/$courseId/$lessonId'
   fileRoutesById: FileRoutesById
@@ -91,6 +115,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PlaygroundRoute: typeof PlaygroundRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
+  ReferenceIndexRoute: typeof ReferenceIndexRoute
+  ReferenceEntryIdRoute: typeof ReferenceEntryIdRoute
   CoursesCourseIdIndexRoute: typeof CoursesCourseIdIndexRoute
   CoursesCourseIdLessonIdRoute: typeof CoursesCourseIdLessonIdRoute
 }
@@ -109,6 +135,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reference/': {
+      id: '/reference/'
+      path: '/reference'
+      fullPath: '/reference/'
+      preLoaderRoute: typeof ReferenceIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reference/$entryId': {
+      id: '/reference/$entryId'
+      path: '/reference/$entryId'
+      fullPath: '/reference/$entryId'
+      preLoaderRoute: typeof ReferenceEntryIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/courses/': {
@@ -139,6 +179,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PlaygroundRoute: PlaygroundRoute,
   CoursesIndexRoute: CoursesIndexRoute,
+  ReferenceIndexRoute: ReferenceIndexRoute,
+  ReferenceEntryIdRoute: ReferenceEntryIdRoute,
   CoursesCourseIdIndexRoute: CoursesCourseIdIndexRoute,
   CoursesCourseIdLessonIdRoute: CoursesCourseIdLessonIdRoute,
 }

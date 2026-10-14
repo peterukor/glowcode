@@ -59,6 +59,7 @@ function LessonPage() {
   const { prev, next } = lessonNeighbors(course, lesson.id);
 
   const assistantContext: AssistantContext = {
+    kind: "lesson",
     courseId: course.id,
     courseTitle: course.title,
     lessonId: lesson.id,

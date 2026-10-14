@@ -2,18 +2,26 @@ import { Send, Sparkles } from "lucide-react";
 import { useId } from "react";
 
 /**
- * Everything Ask Glow will need to answer in context. Built by the lesson page today;
- * a future AI service receives it together with the student's question.
+ * Everything Ask Glow will need to answer in context: the lesson or manual page the student
+ * is reading. A future AI service receives it together with the student's question.
  */
-export type AssistantContext = {
-  courseId: string;
-  courseTitle: string;
-  lessonId: string;
-  lessonTitle: string;
-  objectives: string[];
-  /** Later: the walkthrough and step a student is looking at when they ask. */
-  walkthrough?: { id: string; code: string; line: number };
-};
+export type AssistantContext =
+  | {
+      kind: "lesson";
+      courseId: string;
+      courseTitle: string;
+      lessonId: string;
+      lessonTitle: string;
+      objectives: string[];
+      /** Later: the walkthrough and step a student is looking at when they ask. */
+      walkthrough?: { id: string; code: string; line: number };
+    }
+  | {
+      kind: "reference";
+      /** Undefined on the manual's home page. */
+      referenceId?: string;
+      referenceTitle: string;
+    };
 
 /** Phase 2+: implement this and pass it as `onAsk` to switch the assistant on. */
 export type AskGlow = (question: string, context: AssistantContext) => Promise<string>;
@@ -50,7 +58,7 @@ export function AssistantPanel({ context, onAsk }: { context: AssistantContext; 
       <div className="rounded-2xl border-2 border-dashed bg-muted/40 p-4 text-sm">
         <p className="font-semibold">Glow, your learning helper, isn't switched on yet.</p>
         <p className="mt-2 text-muted-foreground">
-          Soon you'll be able to ask questions about this lesson right here: simpler explanations, why code behaves a
+          Soon you'll be able to ask questions about this page right here: simpler explanations, why code behaves a
           certain way, or a hint when you're stuck.
         </p>
       </div>
@@ -73,7 +81,8 @@ export function AssistantPanel({ context, onAsk }: { context: AssistantContext; 
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Glow will know you're reading <span className="font-semibold text-foreground">{context.lessonTitle}</span>.
+        Glow will know you're reading{" "}
+        <span className="font-semibold text-foreground">{context.kind === "lesson" ? context.lessonTitle : context.referenceTitle}</span>.
       </p>
 
       <form className="mt-auto flex items-end gap-2" onSubmit={(e) => e.preventDefault()} aria-label="Ask Glow a question">
@@ -84,7 +93,7 @@ export function AssistantPanel({ context, onAsk }: { context: AssistantContext; 
           id={inputId}
           rows={2}
           disabled={!available}
-          placeholder={available ? "Ask about this lesson…" : "Ask Glow is coming soon"}
+          placeholder={available ? "Ask about this page…" : "Ask Glow is coming soon"}
           className="min-h-11 flex-1 resize-none rounded-2xl border-2 bg-card px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-70"
         />
         <button type="submit" disabled={!available} className="icon-btn h-11 w-11 disabled:opacity-50" aria-label="Send question">

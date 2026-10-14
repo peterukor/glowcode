@@ -13,6 +13,9 @@ describe("routing", () => {
     ["/courses", "/courses/"],
     ["/courses/python-fundamentals", "/courses/$courseId/"],
     ["/courses/python-fundamentals/what-is-programming", "/courses/$courseId/$lessonId"],
+    ["/reference", "/reference/"],
+    ["/reference/python.builtins.print", "/reference/$entryId"],
+    ["/reference/python.types.str.upper", "/reference/$entryId"],
   ])("%s renders a real page", (path, routeId) => {
     expect(leafRoute(path)).toBe(routeId);
   });
