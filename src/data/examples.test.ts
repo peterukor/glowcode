@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateWalkthrough } from "@/courses/validateWalkthrough";
+import { validateWalkthrough } from "@/walkthrough/validate";
 import type { Walkthrough } from "@/types/trace";
 import { examples } from "./examples";
 
@@ -15,12 +15,30 @@ describe("playground examples", () => {
     }
   });
 
-  it("splits a calculation and its assignment into two events on one line", () => {
+  it("splits a reassignment into read, calculate and rebind events on one line", () => {
     const steps = examples.find((e) => e.id === "reassign")!.steps.filter((s) => s.line === 2);
-    expect(steps.map((s) => s.calc?.phase)).toEqual(["calculate", "assign"]);
-    // While calculating, the variable still refers to the old value.
-    expect(steps[0]!.vars["count"]).toEqual({ type: "int", value: 3 });
-    expect(steps[1]!.vars["count"]).toEqual({ type: "int", value: 5 });
+    expect(steps.map((s) => s.calc?.phase)).toEqual(["read", "calculate", "assign"]);
+    // While reading and calculating, the variable still refers to the old value.
+    expect(steps.map((s) => s.vars["count"])).toEqual([
+      { type: "int", value: 3 },
+      { type: "int", value: 3 },
+      { type: "int", value: 5 },
+    ]);
+  });
+
+  it("repeats the while check until it's False, then leaves the loop", () => {
+    const steps = examples.find((e) => e.id === "while")!.steps;
+    const checks = steps.filter((s) => s.whileLoop?.at === "check").map((s) => s.whileLoop!.result);
+    expect(checks).toEqual([true, true, true, false]);
+    expect(steps.at(-1)!.whileLoop).toEqual({ checks: 4, at: "exit", result: false });
+    expect(steps.at(-1)!.output).toEqual(["1", "2", "3"]);
+  });
+
+  it("shows append changing the list and returning None", () => {
+    const result = examples.find((e) => e.id === "lists")!.steps.find((s) => s.call?.name === "append" && s.call.phase === "result")!;
+    expect(result.call).toMatchObject({ receiverValue: "['apple', 'kiwi']", changes: "['apple', 'kiwi', 'mango']", returns: "None" });
+    expect(result.vars["fruits"]).toEqual({ type: "list", value: ["apple", "kiwi", "mango"] });
+    expect(result.output).toBeUndefined(); // appending prints nothing
   });
 
   it("revisits the loop line on every lap and once more to exit", () => {
@@ -57,8 +75,8 @@ describe("validateWalkthrough", () => {
     visualizations: ["variables"],
     code: "x = 1\nprint(x)",
     steps: [
-      { line: 1, vars: { x: { type: "int", value: 1 } }, note: "" },
-      { line: 2, vars: { x: { type: "int", value: 1 } }, output: ["1"], note: "" },
+      { line: 1, vars: { x: { type: "int", value: 1 } }, note: "x refers to 1." },
+      { line: 2, vars: { x: { type: "int", value: 1 } }, output: ["1"], note: "Prints 1." },
     ],
   };
 

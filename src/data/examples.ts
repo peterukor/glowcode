@@ -1,14 +1,14 @@
-// Hand-written demo traces. A real Python tracer will replace these later; it only
-// needs to produce the same `TraceStep` shape (see src/types/trace.ts).
+// Hand-written, verified demo traces (scripts/check-python.ts replays each one in real Python).
+// A future tracer only needs to produce the same `TraceStep` shape (see src/types/trace.ts).
 
 import type { Example } from "@/types/trace";
 import type { PyValue } from "@/types/python";
+import { buildSteps, py } from "@/walkthrough/build";
 
 const int = (value: number): PyValue => ({ type: "int", value });
 const float = (value: number): PyValue => ({ type: "float", value });
 const str = (value: string): PyValue => ({ type: "str", value });
 const bool = (value: boolean): PyValue => ({ type: "bool", value });
-const list = (value: (string | number)[]): PyValue => ({ type: "list", value });
 
 const variables: Example = {
   id: "variables",
@@ -44,8 +44,8 @@ print(count)`,
     {
       line: 2,
       vars: { count: int(3) },
-      calc: { target: "count", parts: [{ code: "count", value: "3" }, { code: "+" }, { code: "2" }], result: "5", phase: "calculate" },
-      note: "Right side first. Python looks up count (3) and works out 3 + 2. count still refers to 3 at this moment.",
+      calc: { target: "count", parts: [{ code: "count", value: "3" }, { code: "+" }, { code: "2" }], result: "5", phase: "read" },
+      note: "Line 2 starts with the right side. Python looks up the value count refers to right now: 3.",
       checkpoint: {
         prompt: "What value will `count` refer to after line 2?",
         choices: [
@@ -72,10 +72,16 @@ print(count)`,
     },
     {
       line: 2,
+      vars: { count: int(3) },
+      calc: { target: "count", parts: [{ code: "count", value: "3" }, { code: "+" }, { code: "2" }], result: "5", phase: "calculate" },
+      note: "Now it calculates 3 + 2, which is 5. count still refers to 3 at this moment.",
+    },
+    {
+      line: 2,
       vars: { count: int(5) },
       highlight: "count",
       calc: { target: "count", parts: [{ code: "count", value: "3" }, { code: "+" }, { code: "2" }], result: "5", phase: "assign" },
-      note: "Same line, second event: count now refers to the result, 5.",
+      note: "Last event on line 2: the name count is rebound to the result, 5. It no longer refers to 3.",
     },
     { line: 3, vars: { count: int(5) }, output: ["5"], note: "print() shows the value count refers to now: 5." },
   ],
@@ -269,25 +275,117 @@ print(total)`,
   ],
 };
 
+const appendCall = (phase: "call" | "result") => ({
+  name: "append",
+  receiver: "fruits",
+  receiverValue: "['apple', 'kiwi']",
+  args: ['"mango"'],
+  changes: "['apple', 'kiwi', 'mango']",
+  returns: "None",
+  phase,
+});
+
 const listsAndStrings: Example = {
   id: "lists",
   title: "Lists & Strings",
   emoji: "🧺",
   language: "python",
-  visualizations: ["collections", "variables"],
+  visualizations: ["collections", "function", "variables"],
   code: `fruits = ["apple", "kiwi"]
 fruits.append("mango")
 word = "code"
 first = word[0]
 print(fruits[2], first)`,
-  steps: [
-    { line: 1, vars: { fruits: list(["apple", "kiwi"]) }, highlight: "fruits", note: "A list is a row of numbered boxes, starting at 0." },
-    { line: 2, vars: { fruits: list(["apple", "kiwi", "mango"]) }, highlight: "fruits", note: "append() adds a box at the end, at index 2." },
-    { line: 3, vars: { fruits: list(["apple", "kiwi", "mango"]), word: str("code") }, highlight: "word", note: "A string is a row of characters, too." },
-    { line: 4, vars: { fruits: list(["apple", "kiwi", "mango"]), word: str("code"), first: str("c") }, highlight: "first", note: "word[0] grabs the first character." },
-    { line: 5, vars: { fruits: list(["apple", "kiwi", "mango"]), word: str("code"), first: str("c") }, output: ["mango c"], note: "Indexing works the same way on lists and strings." },
-  ],
+  steps: buildSteps([
+    { line: 1, set: { fruits: py.list(["apple", "kiwi"]) }, note: "fruits refers to a list of two items. Positions start at 0." },
+    { line: 2, call: appendCall("call"), note: 'append() is called on the list fruits refers to, with "mango".' },
+    {
+      line: 2,
+      set: { fruits: py.list(["apple", "kiwi", "mango"]) },
+      call: appendCall("result"),
+      element: { name: "fruits", index: 2 },
+      note: 'append() changes that same list: "mango" goes on the end, at index 2. It returns None, which this line doesn\'t use.',
+    },
+    { line: 3, set: { word: py.str("code") }, note: "A string is a sequence of characters, also numbered from 0." },
+    { line: 4, set: { first: py.str("c") }, element: { name: "word", index: 0 }, note: "word[0] is the character at position 0." },
+    { line: 5, print: ["mango c"], element: { name: "fruits", index: 2 }, note: "fruits[2] and first are printed, separated by a space." },
+  ]),
 };
+
+const countCalc = (old: number, phase: "calculate" | "assign") => ({
+  target: "count",
+  parts: [{ code: "count", value: String(old) }, { code: "+" }, { code: "1" }],
+  result: String(old + 1),
+  phase,
+});
+
+/** One lap of the while loop: check (True), print, then count += 1 in two events. */
+const whileLap = (count: number) => [
+  {
+    line: 3,
+    whileLoop: { checks: count, at: "check" as const, result: true },
+    note: `Check ${count}: is ${count} <= 3? True, so the body runs.`,
+  },
+  { line: 4, whileLoop: { checks: count, at: "body" as const, result: true }, print: [String(count)], note: `print(count) shows ${count}.` },
+  {
+    line: 5,
+    whileLoop: { checks: count, at: "body" as const, result: true },
+    calc: countCalc(count, "calculate"),
+    note: `count += 1 is short for count = count + 1. Python works out ${count} + 1.`,
+  },
+  {
+    line: 5,
+    set: { count: py.int(count + 1) },
+    whileLoop: { checks: count, at: "body" as const, result: true },
+    calc: countCalc(count, "assign"),
+    note: `count now refers to ${count + 1}. Back to the while line.`,
+  },
+];
+
+const whileLoop: Example = {
+  id: "while",
+  title: "While Loop",
+  emoji: "⏳",
+  language: "python",
+  visualizations: ["loop", "variables"],
+  whileLoop: { condition: "count <= 3", body: ["print(count)", "count += 1"] },
+  code: `count = 1
+
+while count <= 3:
+    print(count)
+    count += 1`,
+  steps: buildSteps([
+    { line: 1, set: { count: py.int(1) }, note: "count refers to 1." },
+    ...whileLap(1),
+    ...whileLap(2),
+    ...whileLap(3),
+    {
+      line: 3,
+      whileLoop: { checks: 4, at: "check", result: false },
+      note: "Check 4: is 4 <= 3? False.",
+      checkpoint: {
+        prompt: "`count` now refers to 4. What happens at the `while` line?",
+        choices: [
+          { id: "stop", text: "The check is False, so the loop stops" },
+          { id: "print", text: "It prints `4`", feedback: "The body only runs when the check is True. Work out `4 <= 3`." },
+          {
+            id: "forever",
+            text: "It keeps looping forever",
+            feedback: "`count` goes up by 1 every lap, so at some point `count <= 3` stops being True. Has it happened yet?",
+          },
+        ],
+        answer: "stop",
+        explanation: "4 <= 3 is False, so Python skips the body and leaves the loop. The loop printed 1, 2 and 3: one line per True check.",
+      },
+    },
+    {
+      line: 3,
+      whileLoop: { checks: 4, at: "exit", result: false },
+      note: "False means the loop is over. Nothing comes after it, so the program ends.",
+    },
+  ]),
+};
+
 
 const greetCall = (phase: "call" | "run" | "result" | "assign") => ({
   name: "greet",
@@ -402,7 +500,7 @@ print(length)`,
   ],
 };
 
-export const examples: Example[] = [variables, reassign, ifElse, elifChain, andOr, forLoop, listsAndStrings, functions, builtinLen];
+export const examples: Example[] = [variables, reassign, ifElse, elifChain, andOr, forLoop, whileLoop, listsAndStrings, functions, builtinLen];
 
 export function getExample(id: string): Example {
   return examples.find((e) => e.id === id) ?? variables;
