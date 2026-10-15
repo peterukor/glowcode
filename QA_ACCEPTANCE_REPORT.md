@@ -1,7 +1,7 @@
 # Glowcode QA Acceptance Report
 
 Review date: 2026-10-14.
-Reviewed: Phase 6 at `9c5be9d` (`feat/python-chapter-1`). Fixes and this report are on `qa/acceptance-review`, which branches from that commit; the retest results below are for the QA branch head.
+Reviewed: Phase 6 at `9c5be9d` (`feat/python-chapter-1`). Fixes and this report are on `qa/acceptance-review`, which branches from that commit. The retest results below are for the QA branch head, including the follow-up fixes of 2026-10-15 (section 5, D7–D10).
 
 ## 1. State of the repository
 
@@ -31,13 +31,13 @@ The QA branch was cut from the latest completed feature set (Phase 6). All tests
 | Outcome | Count |
 | --- | --- |
 | **PASS** (independently verified) | 113 |
-| **FAIL** (doesn't meet the requirement; still open) | 3 |
-| **FAIL → fixed and retested** | 6 (counted in neither of the rows above) |
+| **FAIL** (doesn't meet the requirement; still open) | 0 |
+| **FAIL → fixed and retested** | 10 (counted in neither of the rows above) |
 | **NOT VERIFIED** | 10 |
 
-Six defects were found and fixed on this branch, each with a regression test or a re-run of the failing browser check. Three smaller defects (all P2) remain open and are listed in section 6.
+Ten defects were found and fixed on this branch, each with a regression test or a re-run of the failing browser check: six in the first pass, and four in a follow-up on 2026-10-15 that closed the three open P2 failures and one more contrast problem found by widening the scan.
 
-Automated suites behind these results (section 7): 159 unit tests, 182 Python checks, 86 component tests (CI), and 337 checks in 8 browser suites that ran to completion. The checklist has 132 rows in total.
+Automated suites behind these results (section 7): 160 unit tests, 182 Python checks, component tests in CI, and 353 checks in 9 browser suites that ran to completion. The checklist has 133 rows in total.
 
 ## 4. Acceptance checklist
 
@@ -217,7 +217,7 @@ All six lessons were read in full, both as source and as rendered pages at deskt
 | R-OVF-phone | Same at 375px | 0px. [phone](qa/evidence/phone-lesson.png) | PASS |
 | R-TABLET | Tablet: side panels collapse to buttons | Both panels hidden; Contents button shown | PASS |
 | R-VIZ | Every showcase demo fits at every step (desktop and phone) | e2e6 41/41; collections suite C-OVF ×14 | PASS |
-| R-ERR | Long error messages stay aligned on phones | Lines wrap at 375px, which shifts the `^` markers under the wrong characters (seen in Phase 6 screenshots) | FAIL (P2, open) |
+| R-ERR | Long error messages stay aligned on phones | **Failed:** at 375px the traceback wrapped, shifting the `^` markers. Lines now stay whole and scroll inside the box, which is keyboard-focusable. Checked for all five debug questions at 360px and 1440px: one rendered line per error line, `^` at the same x position as the character it marks, box inside its card, page not scrolling sideways (`qa_err.py`, 15/15). [phone](qa/evidence/error-output-phone.png) | Fixed |
 
 ### 4.8 Accessibility
 
@@ -229,11 +229,12 @@ All six lessons were read in full, both as source and as rendered pages at deskt
 | A-STRUCT | One h1, page language, title | Matches | PASS |
 | A-KEYS | Keyboard-only use of lessons and walkthroughs | I-9 to I-13 (after the fix) | PASS |
 | A-CONTRAST-LESSON | Lesson and course pages meet WCAG AA in both themes | **Failed at `9c5be9d`:** planned-chapter rows 3.3:1, code-block labels 2.9:1, dark-theme primary buttons 3.1:1. All now ≥ 4.5:1. The only item left below AA on lesson pages is the *disabled* Check answer button, which WCAG exempts. | Fixed |
-| A-CONTRAST-HOME | The home page meets AA | Light theme: the demo's type-coloured values (`1.62`, `True`, `"Ada"`…) are 2.25–3.0:1, and the teal "3" step tile is 2.4:1 | FAIL (P2, open) |
-| A-CONTRAST-MANUAL | Manual pages meet AA | The "Programming concept" category pill is 3.95:1 (12px) | FAIL (P2, open) |
+| A-CONTRAST-HOME | The home page meets AA | **Failed:** type-coloured values 2.25–3.0:1, the teal step tile 2.4:1, and the call-to-action heading on the gradient 2.8:1 at its teal end (measured from pixels; the first pass wrongly passed it by eye). All now pass: type values use deepened text colours, the tile has dark text, and the gradient has a light shade (worst 4.22:1, large text needs 3:1). [values](qa/evidence/home-type-values.png), [heading](qa/evidence/home-cta-gradient.png) | Fixed |
+| A-CONTRAST-MANUAL | Manual pages meet AA | **Failed:** the "Programming concept" category pill was 3.95:1. Now uses the deeper grape ink colour. | Fixed |
+| A-CONTRAST-PLAYER | Walkthrough player and playground meet AA | **Failed** (found by adding the playground and a variables lesson to the scan): code-panel labels ("main.py", "Running line", "No output yet") 2.9:1, the selected speed pill 3.1:1 in dark, and type-coloured values in lesson figures. All fixed; the scan of 9 pages now finds nothing below AA in either theme apart from disabled controls, which WCAG exempts. | Fixed |
 | A-SR | Screen-reader experience | Only the markup was checked (labels, `aria-live` notes, `sr-only` diagram descriptions). No screen reader was used. | NOT VERIFIED |
 
-The contrast was computed for each element in Chromium, compositing semi-transparent colours over the real background. Gradient-filled headings ("Watch it come alive.") report 1:1 because the text fill is transparent; they were checked by eye and are readable, so they aren't counted as failures.
+The contrast was computed for each element in Chromium, compositing semi-transparent colours over the real background. Gradient-filled headings ("Watch it come alive.") are skipped by the scanner because their fill is the gradient itself. Text drawn on a gradient background is measured separately from rendered pixels (A-CONTRAST-HOME). Disabled controls are excluded, as WCAG allows.
 
 ### 4.9 GitHub Pages
 
@@ -259,15 +260,19 @@ The contrast was computed for each element in Chromium, compositing semi-transpa
 | D5 | P2 | Text below WCAG AA on lesson pages (3.3, 2.9, 3.1:1) | `/75` opacity, the `code-line` colour, and the dark theme's light primary behind white text | Full muted colour; `code-fg/75`; a deeper `--primary-button` in dark (`bf9604a`) | Browser contrast scan | A-CONTRAST-LESSON passes |
 | D6 | P1 | The home page and meta descriptions promised an editor ("Type real Python in a friendly editor") | Copy predates the decision to make walkthroughs read-only | Copy describes reading and stepping through programs (`84872a7`) | (copy only) | Checked in the browser |
 
+| D7 | P2 | Tracebacks wrapped on phones, so the `^` markers pointed at the wrong characters | `whitespace-pre-wrap` on the error box; and a `<fieldset>`'s default `min-width: min-content` let an unwrapped box stretch past its card, where it was clipped | Unwrapped, scrollable, focusable error box; `min-w-0` on the question and checkpoint fieldsets (`a73eef1`) | `lesson-blocks.test.tsx` (fails before, passes after) | `qa_err.py` 15/15 |
+| D8 | P2 | Type-coloured values 2.2–3:1 on light backgrounds (home page and lesson figures) | Text used the pale type colours meant for borders and tints | `--t-*-text` tokens, deepened in light and slightly lifted in dark (`712c78a`) | `src/visualizations/values.test.ts` | contrast scan, both themes |
+| D9 | P2 | Home: teal step tile, True/False results, lap labels, gradient heading below AA; manual category pill 3.95:1 | Colours chosen without a contrast check | Darker text or ink colours; a light shade over the gradient behind white text (`712c78a`) | Browser contrast scan plus pixel check | A-CONTRAST-HOME, A-CONTRAST-MANUAL, A-CONTRAST-GRADIENT pass |
+| D10 | P2 | Walkthrough code-panel labels 2.9:1; selected speed pill 3.1:1 in dark | `--code-line` too dark for text; pills used the light dark-theme primary | Lighter `--code-line`; pills use `--primary-button` (`712c78a`) | Browser contrast scan | A-CONTRAST-PLAYER passes |
+
 Supporting commit: `7f3a14e` adds the acceptance walkthroughs to the developer showcase, so the browser checks run on Python-verified data.
 
 ## 6. Known remaining problems
 
+R1–R3 from the first pass are fixed (D7–D9). The items below remain.
+
 | # | Priority | Problem | Why it isn't fixed here |
 | --- | --- | --- | --- |
-| R1 | P2 | Home page demo values in type colours are 2.25–3.0:1 in the light theme; the teal step tile is 2.4:1 | The type colours (`--t-int`, `--t-str`…) are design-system tokens used across the app. Changing them is a design decision, not a bug fix. |
-| R2 | P2 | The manual's category pill is 3.95:1 | Small and cosmetic; needs a colour choice |
-| R3 | P2 | Long tracebacks wrap on phones and misalign the `^` markers | Needs horizontal scrolling inside the error box (a small component change); wrapping keeps it readable for now |
 | R4 | Info | Chapter 2's existing lesson says "store the result" twice in feedback, while elsewhere it says names "refer to" values | Chapter 2 is Phase 7 scope; flagged for that review |
 | R5 | Test infra | Local browser suites e2e, e2e2 and e2e3 from earlier phases use selectors for content Phase 6 moved | Their behaviours are re-covered by e2e7, qa_ui and qa_viz. The manual suite (e2e4) was retargeted and passes 59/59. |
 | R6 | Process | The live site still shows Phase 5 | Phase 6 and this branch are deliberately not merged |
@@ -278,14 +283,15 @@ Supporting commit: `7f3a14e` adds the acceptance walkthroughs to the developer s
 | --- | --- | --- |
 | Type check | CI | success |
 | Lint | CI | success |
-| Unit tests | CI / local | CI success; 159/159 locally |
+| Unit tests | CI / local | CI success; 160/160 locally |
 | Python correctness | CI / local | CI success; 182/182 locally |
 | Production build (Vite) | CI | success |
 | Component tests (vitest + jsdom) | CI | success (6 test files, 86 tests) |
 | qa_viz.py (loops, windows, variables, references, motion) | local Chromium | 44/44 |
 | qa_collections.py (lists, strings, precedence, dicts, sets, tuples; desktop and phone) | local Chromium | 27/27 |
 | qa_fn.py (functions and call stack) | local Chromium | 7/7 |
-| qa_ui.py (interactions, navigation, progress, link crawl, responsive, accessibility) | local Chromium | 34/36 (both failures are A-CONTRAST-HOME, listed above) |
+| qa_ui.py (interactions, navigation, progress, link crawl, responsive, accessibility) | local Chromium | 37/37 |
+| qa_err.py (error output alignment, phone and desktop) | local Chromium | 15/15 |
 | e2e7.py (Phase 6 Chapter 1, desktop and phone) | local Chromium | 88/88 |
 | e2e6.py (Phase 5 visualizations, desktop and phone) | local Chromium | 41/41 |
 | e2e4 (manual, retargeted to the moved content) | local Chromium | 59/59 |
@@ -311,4 +317,4 @@ Phase 7 doesn't exist on any branch, so the Chapter 2 priorities in the brief (a
 - **Chapter 1 and the visualization engine meet the agreed design** after the fixes above. The for-loop pop-out, the travelling assignment, the sliding windows and the while-loop evaluation all behave as specified, step by step, forwards and backwards.
 - **Don't start Chapter 3 yet.** Chapter 2 (Phase 7) is next in the outline and hasn't been written. Chapter 3 assumes variables and types.
 - Before Phase 7: review and merge Phase 6 and this QA branch (or cherry-pick the fixes) so the live site shows Chapter 1, then verify P-3 to P-7 on the deployed site.
-- R1–R3 are worth a small polish pass, but none of them blocks learning.
+- The three P2 failures left open by the first pass (R1–R3) are fixed (D7–D9); no checklist item is failing.

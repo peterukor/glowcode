@@ -15,13 +15,17 @@ OVF = "document.documentElement.scrollWidth - window.innerWidth"
 CONTRAST = """(sel) => {
   const lum = c => { const [r,g,b] = c.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }); return 0.2126*r + 0.7152*g + 0.0722*b };
   const parse = s => { const m = s.match(/[\\d.]+/g); return m ? m.map(Number) : [0,0,0,0] };
-  const toRGB = s => { const c = document.createElement('canvas').getContext('2d'); c.fillStyle = s; c.fillRect(0,0,1,1); return [...c.getImageData(0,0,1,1).data] };
+  const toRGB = s => { const m = s.match(/^color\\(srgb ([\\d.e-]+) ([\\d.e-]+) ([\\d.e-]+)(?: \\/ ([\\d.]+))?\\)$/);
+    if (m) return [m[1]*255, m[2]*255, m[3]*255, (m[4] === undefined ? 1 : Number(m[4])) * 255];
+    const c = document.createElement('canvas').getContext('2d', { colorSpace: 'srgb' }); c.clearRect(0,0,1,1); c.fillStyle = s; c.fillRect(0,0,1,1); return [...c.getImageData(0,0,1,1).data] };
   const bgOf = el => { let stack = []; for (let e = el; e; e = e.parentElement) { const c = toRGB(getComputedStyle(e).backgroundColor); if (c[3] > 0) { stack.push(c); if (c[3] === 255) break } }
     let base = [255,255,255]; if (!stack.length || stack[stack.length-1][3] < 255) base = toRGB(getComputedStyle(document.body).backgroundColor).slice(0,3);
     for (const c of stack.reverse()) { const a = c[3]/255; base = base.map((v,i) => c[i]*a + v*(1-a)) } return base };
   const out = [];
   for (const el of document.querySelectorAll(sel)) {
-    if (!el.offsetParent || !el.textContent.trim() || el.closest('.viz-stage, svg, [aria-hidden=true]')) continue;
+    if (!el.offsetParent || !el.textContent.trim() || el.closest('.viz-stage, svg, [aria-hidden=true], :disabled, [aria-disabled=true]')) continue;
+    if (getComputedStyle(el).backgroundClip === 'text' || getComputedStyle(el).webkitBackgroundClip === 'text') continue;
+    { let g = el, img = false; for (; g; g = g.parentElement) { const cs2 = getComputedStyle(g); if (cs2.backgroundImage !== 'none' && !cs2.backgroundImage.startsWith('url')) { img = true; break } if (toRGB(cs2.backgroundColor)[3] === 255) break } if (img) continue; }
     if ([...el.childNodes].every(n => n.nodeType !== 3 || !n.textContent.trim())) continue;
     const cs = getComputedStyle(el); const fg = toRGB(cs.color); const a = fg[3]/255 * Number(cs.opacity);
     const bg = bgOf(el); const fgc = fg.slice(0,3).map((v,i) => v*a + bg[i]*(1-a));
@@ -116,10 +120,10 @@ with sync_playwright() as p:
     for theme in ["light", "dark"]:
         cp_ = page(1440, 950, color_scheme=theme)
         bad = []
-        for url in [f"{BASE}/", f"{BASE}/courses", f"{C}/print-and-output", f"{C}/chapter-1-review", f"{BASE}/reference", f"{BASE}/reference/concept.expression"]:
+        for url in [f"{BASE}/", f"{BASE}/courses", f"{C}/print-and-output", f"{C}/chapter-1-review", f"{C}/why-variables-exist", f"{BASE}/playground", f"{BASE}/reference", f"{BASE}/reference/concept.expression", f"{BASE}/reference/python.types.int"]:
             cp_.goto(url); cp_.wait_for_timeout(400)
             if theme == "dark":
-                cp_.evaluate("() => { document.documentElement.classList.add('dark'); }"); cp_.wait_for_timeout(100)
+                cp_.evaluate("() => { document.documentElement.classList.add('dark'); }"); cp_.wait_for_timeout(800)
             for x in cp_.evaluate(CONTRAST, "p, li, span, a, button, label, h1, h2, h3, h4, dt, dd, small, figcaption, code, td, th"):
                 bad.append({**x, "url": url.replace(BASE, "")})
         uniq = {}
@@ -127,6 +131,20 @@ with sync_playwright() as p:
         json.dump(list(uniq.values()), open(f"qa/ui/contrast-{theme}.json", "w"), indent=1)
         check(f"A-CONTRAST-{theme}", f"{theme} theme: text meets WCAG AA contrast on the main pages (computed per element)", not uniq,
               f"{len(uniq)} below AA: " + "; ".join(f'{b["text"]!r} {b["ratio"]} {b["url"]}' for b in list(uniq.values())[:5]))
+
+    # text on a gradient: measured from rendered pixels just above and below the text
+    from PIL import Image
+    def lum(c):
+        f = lambda v: (v / 255) / 12.92 if v / 255 <= 0.03928 else ((v / 255 + 0.055) / 1.055) ** 2.4
+        return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2])
+    gp = page(1280, 900)
+    gp.goto(f"{BASE}/"); gp.wait_for_timeout(500)
+    h = gp.get_by_text("Ready to see your code think?"); h.scroll_into_view_if_needed(); gp.wait_for_timeout(300)
+    box = gp.evaluate("() => { const e = [...document.querySelectorAll('h2')].find(x => x.textContent.trim() === 'Ready to see your code think?'); const r = document.createRange(); r.selectNodeContents(e); const b = r.getBoundingClientRect(); return [b.x, b.y, b.width, b.height] }")
+    gp.screenshot(path="qa/ui/cta-full.png")
+    im = Image.open("qa/ui/cta-full.png").convert("RGB"); x, y, w, hh = map(int, box)
+    worst = min(1.05 / (lum(im.getpixel((i, j))) + 0.05) for i in range(x, x + w) for j in (y - 4, y - 2, y + hh + 1, y + hh + 3))
+    check("A-CONTRAST-GRADIENT", "White heading on the home gradient: at least 3:1 (large text) against every background pixel beside it", worst >= 3, f"worst {worst:.2f}:1")
 
     # ======================================================= navigation and progress
     pg = page(1440, 950)
