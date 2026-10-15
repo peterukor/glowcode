@@ -298,7 +298,7 @@ R1–R3 from the first pass are fixed (D7–D9). The items below remain.
 | e2e5.py (Phase 4 engine) | local Chromium | 35/35 |
 | e2e, e2e2, e2e3 (earlier phases) | local Chromium | stopped on selectors made stale by Phase 6 (R5) |
 
-CI run `38624226157` on the QA branch passed every step. Its log bodies couldn't be downloaded through the workspace proxy, so CI test counts come from the test files rather than the log.
+CI runs `38624226157` (first pass) and `38751458157` (follow-up, `1dff0b3`) on the QA branch passed every step. Its log bodies couldn't be downloaded through the workspace proxy, so CI test counts come from the test files rather than the log.
 
 ## 8. Not tested
 
