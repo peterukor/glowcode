@@ -40,7 +40,7 @@ export function CheckpointQuestion({
       <p className="inline-flex items-center gap-1.5 rounded-full bg-sky/15 px-3 py-1 text-xs font-bold text-sky-ink">
         <Eye className="h-3.5 w-3.5" aria-hidden /> Predict the next step
       </p>
-      <fieldset className="mt-2" disabled={record.correct}>
+      <fieldset className="mt-2 min-w-0" disabled={record.correct}>
         <legend className="w-full">
           <h4 id={promptId} ref={promptRef} tabIndex={-1} className="font-bold outline-none">
             <RichTextView text={checkpoint.prompt} />

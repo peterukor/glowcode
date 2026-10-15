@@ -62,7 +62,7 @@ export function QuestionActivity({ block, onAttempt }: { block: QuestionBlock; o
         {debug ? "Find the bug" : "Predict"}
       </p>
 
-      <fieldset className="mt-3" disabled={done}>
+      <fieldset className="mt-3 min-w-0" disabled={done}>
         <legend id={promptId} className="text-lg font-bold">
           <RichTextView text={block.prompt} />
         </legend>
@@ -71,7 +71,11 @@ export function QuestionActivity({ block, onAttempt }: { block: QuestionBlock; o
         {block.errorOutput && (
           <div className="mt-2 rounded-2xl border-2 border-coral/40 bg-coral/8 px-4 py-3" role="group" aria-label="What Python printed">
             <p className="text-xs font-bold uppercase tracking-wide text-coral-ink">What Python printed</p>
-            <pre className="mt-1 whitespace-pre-wrap font-mono text-sm">{block.errorOutput}</pre>
+            {/* Never wrap: the ^ markers line up with the code above them by column. Long lines scroll
+                inside the box instead (focusable, so keyboard users can scroll it too). */}
+            <pre className="mt-1 overflow-x-auto whitespace-pre pb-1 font-mono text-sm" tabIndex={0} aria-label="Error message">
+              {block.errorOutput}
+            </pre>
           </div>
         )}
 

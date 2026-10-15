@@ -165,6 +165,19 @@ describe("QuestionActivity", () => {
     expect(within(screen.getByRole("group", { name: "What Python printed" })).getByText(/NameError/)).toBeTruthy();
     noButton(/Hint/);
   });
+
+  it("never wraps error output, so the ^ markers stay under the right characters", () => {
+    // QA regression: on phones the traceback wrapped and the ^ line no longer matched the code
+    // line above it. Lines must stay whole and scroll inside the box (keyboard-focusable), and
+    // the fieldset must be allowed to shrink so the box can't push past the card.
+    render(<QuestionActivity block={{ ...question, variant: "debug", errorOutput: "  File \"main.py\", line 1\n    print(\"Hi\"\n         ^\nSyntaxError: '(' was never closed" }} onAttempt={() => {}} />);
+    const pre = document.querySelector<HTMLPreElement>('pre[aria-label="Error message"]')!;
+    expect(pre.className).toContain("whitespace-pre ");
+    expect(pre.className).not.toContain("whitespace-pre-wrap");
+    expect(pre.className).toContain("overflow-x-auto");
+    expect(pre.tabIndex).toBe(0);
+    expect(pre.closest("fieldset")!.className).toContain("min-w-0");
+  });
 });
 
 const practice: PracticeBlock = {
