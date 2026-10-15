@@ -146,6 +146,17 @@ Phases: `"call"` (arguments go in), `"run"` (a user-defined function's body runs
 `assignTo`). Leave out slots that don't apply, or that the lesson isn't ready for (print's
 `None` in a first lesson). Write values as Python would show them.
 
+### input()
+
+`input()` is a call like any other: its argument is the prompt, `returns` is the typed answer
+as a string, and `prints` is the prompt followed by that answer (one output line, as on a
+terminal). Give the walkthrough `input: ["Ada"]` so the player can show the labelled sample
+input and `check:python` can run it:
+
+```ts
+{ name: "input", args: ['"What is your name? "'], returns: '"Ada"', prints: ["What is your name? Ada"], assignTo: "name", phase: "result" }
+```
+
 ## 9. Validating a walkthrough
 
 - `bun run test` runs `validateWalkthrough` on every walkthrough in the app and checks that ids
@@ -241,6 +252,11 @@ valid Python (`"3 * 2"`). Work it out one operator per event: `active` is the op
 worked out and `done` holds the results so far, `{ mul: "6" }`. The validator checks that
 children are worked out before their parent and that the root equals `result`;
 `check:python` evaluates every node.
+
+A tree also helps with a single operator when the lesson needs "calculate" and "produce the
+result" as separate events (Chapter 2's `score = score + 5`): one `calculate` event with
+`active` set and `done: {}` (the result shows `?`), then one with `done: { add: "15" }`. Once the
+root is done, names are no longer marked as being read.
 
 ## 15. The call stack
 

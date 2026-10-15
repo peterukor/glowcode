@@ -1,7 +1,7 @@
 # Python Fundamentals: Course Outline
 
-Status: Chapter 1 complete; Chapter 2 has one lesson; Chapters 3–10 planned.
-Last updated: 2026-10-14 (Phase 6).
+Status: Chapters 1 and 2 complete; Chapters 3–10 planned.
+Last updated: 2026-10-15 (Phase 7).
 
 This file records what the Python Fundamentals course covers, what's written, and how to add
 the next chapter. [`PRODUCT_ROADMAP.md`](./PRODUCT_ROADMAP.md) stays the source of truth for
@@ -13,7 +13,7 @@ reflected here.
 | # | Chapter | Chapter id | Status |
 | --- | --- | --- | --- |
 | 1 | Getting Started with Programming | `getting-started` | complete (6 lessons) |
-| 2 | Variables, Values & Data Types | `variables` | in progress (1 lesson) |
+| 2 | Variables, Values & Data Types | `variables` | complete (8 lessons) |
 | 3 | Operators & Expressions | `operators-expressions` | planned |
 | 4 | Making Decisions with Conditionals | `conditionals` | planned |
 | 5 | Repetition with Loops | `loops` | planned |
@@ -87,7 +87,56 @@ top instead of at a missing anchor. Stored progress keys are unchanged.
 | 5 | walkthrough checkpoint (`15`, not `10 + 5`), `predict-second-line`, `predict-next-statement`, `reflect-output-order`, `practice-receipt` |
 | 6 | `review-last-line`, `review-next-line`, `review-code-vs-output`, `review-explain-program`, `review-debug-misspelled`, `review-debug-syntax`, `review-order-countdown`, `practice-morning-routine`, `practice-party-plan` |
 
-## Conventions used in Chapter 1
+## Chapter 2: Variables, Values & Data Types
+
+Goal: a student can trace several lines of code and say what value each variable refers to
+after every line, tell the basic types apart, convert between them, and use `input()` knowing
+it always returns a string. Variables are taught as **names that refer to values**, never as
+boxes that contain them.
+
+| # | Lesson id | Title | Teaches | Walkthrough |
+| --- | --- | --- | --- | --- |
+| 1 | `why-variables-exist` | Why Do We Need Variables? | the cost of repeating a value; a variable as a name that refers to a value; `print()` with several values | `py-welcome-name` (variables) |
+| 2 | `values-and-types` | Values and Python Data Types | `int`, `float`, `str`, `bool`, `NoneType`; `None` as a real value; `18` vs `"18"` | none (a variables figure) |
+| 3 | `creating-variables` | Creating Variables with Assignment | name / `=` / value; `=` is an instruction, not equality; naming rules; snake_case | `py-score-assignment` (variables) |
+| 4 | `using-variables` | Using Variables in Programs | looking up a value; `print(name)` vs `print("name")`; using variables in calculations; NameError | `py-read-variables` (variables) |
+| 5 | `reassignment` | Changing Values with Reassignment | read → calculate → produce → rebind → print; `b = a` doesn't link names; multi-step tracing | `py-score-reassign` (variables + expression tree), `py-independent-names` (variables) |
+| 6 | `type-conversion` | Strings, Numbers & Type Conversion | `+` adds or joins; TypeError; `type()`; `int()`, `float()`, `str()` return new values; ValueError | `py-int-conversion` (function + variables) |
+| 7 | `getting-input` | Getting Input from Users | `input()` shows a prompt, waits, returns a string; converting answers; ValueError on bad answers | `py-input-name`, `py-input-age` (function + variables, sample input) |
+| 8 | `chapter-2-review` | Chapter Review & Practice | names, types, the x/y trace, `b = a`, conversion, input strings, NameError, TypeError, a combined challenge | none |
+
+### What was reused
+
+The Phase 3 lesson `why-variables-exist` keeps its id (so completions stay) and became lesson 1,
+rewritten around the brief's repeated-name example. Its activities moved to the lessons that now
+teach them, with ids unchanged: `debug-name-case` and `reflect-use-before-create` to lesson 4;
+`predict-score`, `reflect-earlier-print` (now about `score`) and `practice-player-level` to
+lesson 5. Its walkthroughs `py-age-assignment` and `py-birthday` were replaced by
+`py-score-assignment` and `py-score-reassign`; a saved "last activity" pointing at an old
+walkthrough opens the lesson at the top.
+
+### Activities
+
+| Lesson | Activities |
+| --- | --- |
+| 1 | walkthrough checkpoint (`print(name, ...)`), `predict-change-name`, `practice-city-postcard` |
+| 2 | `predict-print-none`, `predict-type-price-text`, `predict-which-bool`, `reflect-18-and-text`, `practice-product-types` |
+| 3 | `debug-backwards-assignment`, `predict-valid-name`, `debug-name-with-space`, `practice-fix-names` |
+| 4 | `predict-name-vs-text`, `debug-name-case`, `debug-misspelled-variable`, `reflect-use-before-create`, `practice-profile-card` |
+| 5 | walkthrough checkpoints (score before the rebind; `print(b)`), `reflect-earlier-print`, `predict-score`, `predict-trace-points`, `practice-player-level` |
+| 6 | walkthrough checkpoint (what `int()` returns), `debug-mixed-plus`, `predict-convert-then-join`, `debug-int-word`, `practice-shop-total` |
+| 7 | walkthrough checkpoint (what `input()` returns), `predict-two-inputs`, `debug-input-word`, `practice-greeting-next-year` |
+| 8 | `review-valid-name`, `review-identify-types`, `review-trace-xy`, `review-names-independent`, `review-explain-trace`, `review-convert-or-join`, `review-input-type`, `review-debug-name`, `review-debug-join-number`, `practice-ticket-total` |
+
+### Manual entries
+
+Added in Phase 7: `python.types.float`, `python.types.bool`, `python.builtins.int`,
+`python.builtins.float`, `python.builtins.str`, `python.errors.ValueError`. Reused:
+`concept.variable`, `python.operators.assignment`, `python.types.int`, `python.types.str`,
+`python.types.None`, `python.builtins.print`, `python.builtins.input`, `python.builtins.type`,
+`python.errors.NameError`, `python.errors.TypeError`, `python.errors.SyntaxError`.
+
+## Conventions used in Chapters 1 and 2
 
 These now apply to every chapter. The mechanics are in
 [`LESSON_AUTHORING.md`](./LESSON_AUTHORING.md); the reasoning is in
@@ -105,6 +154,11 @@ These now apply to every chapter. The mechanics are in
   lesson, not every time it appears.
 - **Nothing stored by `print()`.** Lessons never suggest that printing keeps a value. Return
   values are named as different from output wherever both appear.
+- **Names refer to values.** Variables are names bound to values, not boxes. Lessons say a name
+  "refers to" a value; an assignment "makes the name refer to" it; reassignment "rebinds" it.
+- **Labelled sample input.** A program that calls `input()` carries an `input` list of sample
+  answers. The page shows them as "Sample user input" and says they're pretend; notes say "the
+  sample user types…", never "you type…". `check:python` runs the program with those answers.
 
 ## Choosing activities
 
@@ -147,11 +201,10 @@ Don't add a diagram the lesson doesn't need. A lesson about what programming is 
    from `planned.ts`. Remove the entry from `planned.ts` and put the new chapter in the same
    position in `course.ts`.
 3. Set `status: "in-progress"` until the last lesson is published, then `"complete"`.
-4. For chapter 2, keep the existing lesson `why-variables-exist` and its activity and walkthrough
-   ids; extend or reorder around it.
+4. Chapter 3 is next (`operators-expressions`). It has no earlier lessons to preserve; Chapters 1 and 2's ids must not change.
 5. Write each lesson to the conventions above and check it against section 15 of the teaching
    guidelines.
-6. Add a test like `src/courses/python-fundamentals/chapter-1.test.ts`: lesson order, answers,
+6. Add a test like `src/courses/python-fundamentals/chapter-2.test.ts`: lesson order, answers,
    walkthrough timing, manual links and the recap.
 7. Run `bun run typecheck`, `bun run lint`, `bun run test`, `bun run check:python` and
    `bun run build`, then read every lesson in a browser at desktop and phone widths.

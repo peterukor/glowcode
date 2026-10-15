@@ -1,6 +1,6 @@
 # Glowcode Product Roadmap & Decision Log
 
-Status: living planning document. Last reviewed: 2026-10-14.
+Status: living planning document. Last reviewed: 2026-10-15.
 Purpose: source of truth for development prompts, scope decisions and future reviews. Update this document when the product decisions change; never silently reinterpret a previous decision.
 
 ## Product vision
@@ -59,3 +59,4 @@ Before writing a Claude implementation prompt or reviewing a phase:
 - 2026-10-14 (Phase 6, from the approved Phase 6 brief): Python Fundamentals outline is ten chapters: Getting Started with Programming; Variables, Values & Data Types; Operators & Expressions; Making Decisions with Conditionals; Repetition with Loops; Strings; Lists & Collections; Functions; Errors & Debugging; Putting It Together. Only Chapter 1 is written; Chapters 3–10 are shown as **planned** (no placeholder lessons) and Chapter 2 keeps its one existing lesson. No chapter locking. Details and status in COURSE_OUTLINE.md. Later changes to this order are proposed and logged here first.
 - 2026-10-14 (Phase 6): Lessons end with a short "Key ideas" list (the Phase 6 brief asks for a concise recap). This replaces the earlier "no recap" guideline; TEACHING_GUIDELINES.md section 13 is updated.
 - 2026-10-14 (Phase 6): "Arrange in order" activities use multiple-choice orders for now. A drag-to-reorder activity is a candidate for phase 7, not built yet.
+- 2026-10-15 (Phase 7): Chapter 2 (Variables, Values & Data Types) written: eight lessons. Read-only programs that call `input()` show clearly labelled **sample user input** and never imply the student typed it; this keeps the read-only walkthrough decision (2026-10-13) intact. No sequencing change: Chapter 3 (Operators & Expressions) is next.

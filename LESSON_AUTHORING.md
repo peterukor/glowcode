@@ -128,6 +128,29 @@ output at the right step, and `check:python` still checks every step against Pyt
 out too when the student is meant to work the output out, as in an "explain this program"
 reflection; say so in the caption.
 
+### Programs that call input()
+
+Glowcode never runs a student's typing, so a program that calls `input()` needs **sample user
+input**: the answers a pretend user types, in order. Add `input` to the code block (and the same
+list to its walkthrough), to a question with code, or to a practice task's solution:
+
+```ts
+{
+  type: "code",
+  language: "python",
+  code: `name = input("What is your name? ")
+print("Hello,", name)`,
+  input: ["Ada"],
+  output: ["What is your name? Ada", "Hello, Ada"], // the prompt, then what the sample user typed
+  walkthrough: inputName, // with input: ["Ada"] too
+}
+```
+
+The page shows the answers in a box labelled "Sample user input" that says they're pretend.
+Write notes as "the sample user types Ada", never "you type". `check:python` feeds the answers to
+Python, echoing them after the prompt the way a terminal does, and fails if a program calls
+`input()` without them or a block and its walkthrough disagree.
+
 ## 6. Associating a walkthrough
 
 Add `walkthrough` to a code block to show a "Walk through code" button that expands the
