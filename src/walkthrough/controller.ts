@@ -139,5 +139,8 @@ function ordinal(n: number) {
 export function readingNames(step: TraceStep): string[] {
   const calc = step.calc;
   if (!calc || calc.phase === "assign") return [];
+  // With an expression tree, once the whole expression has a result Python has finished
+  // reading: the step shows the produced value, not the lookup.
+  if (calc.tree && calc.done?.[calc.tree.id] !== undefined) return [];
   return calc.parts.filter((p) => p.value !== undefined && p.code in step.vars).map((p) => p.code);
 }

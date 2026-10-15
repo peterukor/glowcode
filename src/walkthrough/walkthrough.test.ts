@@ -77,6 +77,14 @@ describe("playback controller", () => {
     expect(readingNames(calc!)).toEqual(["count"]);
     expect(readingNames(assign!)).toEqual([]);
   });
+
+  it("stops reading once an expression tree has produced its result", () => {
+    const tree = { id: "add", code: "score + 5", op: "+", left: { id: "s", code: "score", value: "10" }, right: { id: "f", code: "5" } };
+    const step = (done: Record<string, string>) => ({
+      line: 2,
+      vars: { score: { type: "int" as const, value: 10 } },
+      calc: { target: "score", parts: [{ code: "score", value: "10" }, { code: "+" }, { code: "5" }], result: "15", phase: "calculate" as const, tree, done },
+    });
     expect(readingNames(step({}))).toEqual(["score"]);
     expect(readingNames(step({ add: "15" }))).toEqual([]);
   });
