@@ -62,7 +62,7 @@ export function PlaybackControls({ playback: p, playLabel = "Play" }: { playback
             onClick={() => p.setSpeed(v)}
             aria-pressed={p.speed === v}
             aria-label={`Speed ${v}×`}
-            className={`rounded-full px-2.5 py-1 text-xs font-bold ${p.speed === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            className={`rounded-full px-2.5 py-1 text-xs font-bold ${p.speed === v ? "bg-primary-button text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
           >
             {v}×
           </button>

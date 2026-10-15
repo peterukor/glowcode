@@ -28,7 +28,7 @@ function Playground() {
           onClick={() => setExampleId(e.id)}
           aria-pressed={e.id === exampleId}
           className={`rounded-full border-2 px-4 py-1.5 text-sm font-semibold transition-all ${
-            e.id === exampleId ? "border-primary bg-primary text-primary-foreground shadow-soft" : "bg-card hover:border-primary"
+            e.id === exampleId ? "border-primary bg-primary-button text-primary-foreground shadow-soft" : "bg-card hover:border-primary"
           }`}
         >
           {e.emoji} {e.title}

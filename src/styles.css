@@ -21,6 +21,7 @@
   --color-card: var(--card);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-button: var(--primary-button);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -51,6 +52,16 @@
   --color-t-tuple: var(--t-tuple);
   --color-t-dict: var(--t-dict);
   --color-t-set: var(--t-set);
+  /* type colours for text: deepened in the light theme so values read at WCAG AA (see :root) */
+  --color-t-int-text: var(--t-int-text);
+  --color-t-float-text: var(--t-float-text);
+  --color-t-str-text: var(--t-str-text);
+  --color-t-bool-text: var(--t-bool-text);
+  --color-t-list-text: var(--t-list-text);
+  --color-t-none-text: var(--t-none-text);
+  --color-t-tuple-text: var(--t-tuple-text);
+  --color-t-dict-text: var(--t-dict-text);
+  --color-t-set-text: var(--t-set-text);
 
   /* code */
   --color-code-bg: var(--code-bg);
@@ -81,6 +92,8 @@
   --card: oklch(1 0 0);
   --primary: var(--grape);
   --primary-foreground: oklch(0.99 0 0);
+  /* Background for filled buttons and selected pills (white text). Deeper in the dark theme. */
+  --primary-button: var(--primary);
   --secondary: oklch(0.95 0.025 290);
   --secondary-foreground: oklch(0.3 0.08 290);
   --muted: oklch(0.955 0.012 290);
@@ -99,7 +112,19 @@
 
   --code-bg: oklch(0.21 0.04 285);
   --code-fg: oklch(0.93 0.02 285);
-  --code-line: oklch(0.5 0.04 285);
+  /* Labels and line numbers on the dark code panel: light enough for 4.5:1 text. */
+  --code-line: oklch(0.66 0.04 285);
+  /* Type colours are pale enough for borders and tints but too light for text on a light
+     background, so text uses a deeper mix of each one. The dark theme keeps them as they are. */
+  --t-int-text: color-mix(in srgb, var(--t-int) 62%, var(--foreground));
+  --t-float-text: color-mix(in srgb, var(--t-float) 62%, var(--foreground));
+  --t-str-text: color-mix(in srgb, var(--t-str) 62%, var(--foreground));
+  --t-bool-text: color-mix(in srgb, var(--t-bool) 62%, var(--foreground));
+  --t-list-text: color-mix(in srgb, var(--t-list) 62%, var(--foreground));
+  --t-none-text: color-mix(in srgb, var(--t-none) 62%, var(--foreground));
+  --t-tuple-text: color-mix(in srgb, var(--t-tuple) 62%, var(--foreground));
+  --t-dict-text: color-mix(in srgb, var(--t-dict) 62%, var(--foreground));
+  --t-set-text: color-mix(in srgb, var(--t-set) 62%, var(--foreground));
   --code-active: oklch(0.58 0.22 293 / 0.28);
   --syn-kw: oklch(0.75 0.17 320);
   --syn-str: oklch(0.82 0.13 50);
@@ -123,6 +148,15 @@
   /* The dark theme's primary is light enough to read as text on the dark page, which is too
      light behind white button text (3.1:1). Buttons use a deeper grape to reach WCAG AA. */
   --primary-button: oklch(0.55 0.2 293);
+  --t-int-text: color-mix(in srgb, var(--t-int) 80%, var(--foreground));
+  --t-float-text: color-mix(in srgb, var(--t-float) 80%, var(--foreground));
+  --t-str-text: color-mix(in srgb, var(--t-str) 80%, var(--foreground));
+  --t-bool-text: color-mix(in srgb, var(--t-bool) 80%, var(--foreground));
+  --t-list-text: color-mix(in srgb, var(--t-list) 80%, var(--foreground));
+  --t-none-text: color-mix(in srgb, var(--t-none) 80%, var(--foreground));
+  --t-tuple-text: color-mix(in srgb, var(--t-tuple) 80%, var(--foreground));
+  --t-dict-text: color-mix(in srgb, var(--t-dict) 80%, var(--foreground));
+  --t-set-text: color-mix(in srgb, var(--t-set) 80%, var(--foreground));
   --secondary: oklch(0.28 0.05 290);
   --secondary-foreground: oklch(0.92 0.04 290);
   --muted: oklch(0.25 0.03 285);
@@ -178,6 +212,10 @@
 @utility bg-brand {
   background-image: var(--gradient-brand);
 }
+/* The brand gradient behind white text: a light shade keeps its teal end above 3:1. */
+@utility bg-brand-deep {
+  background-image: linear-gradient(oklch(0 0 0 / 0.2), oklch(0 0 0 / 0.2)), var(--gradient-brand);
+}
 @utility text-brand {
   background-image: var(--gradient-brand);
   -webkit-background-clip: text;
@@ -195,7 +233,7 @@
   border-radius: 9999px;
   padding: 0.8rem 1.5rem;
   font-weight: 700;
-  background: var(--primary-button, var(--primary));
+  background: var(--primary-button);
   color: var(--primary-foreground);
   box-shadow: var(--shadow-pop);
   transition:
@@ -514,7 +552,8 @@
   font-family: var(--font-mono, monospace);
   font-size: 10px;
   font-weight: 700;
-  color: var(--muted-foreground);
+  /* a touch darker than muted: these 10px indexes sat just under 4.5:1 on tinted cells */
+  color: color-mix(in srgb, var(--muted-foreground) 82%, var(--foreground));
   transition: color 0.25s ease;
 }
 .seq-index-neg {
@@ -554,7 +593,7 @@
 .seq-cell[data-state="active"] .seq-index,
 .seq-cell[data-state="raised"] .seq-index,
 .seq-cell[data-state="selected"] .seq-index {
-  color: var(--viz-active);
+  color: color-mix(in srgb, var(--viz-active) 85%, var(--foreground));
 }
 .seq-cell[data-state="raised"] .seq-value {
   transform: translateY(-0.5rem) scale(1.06);

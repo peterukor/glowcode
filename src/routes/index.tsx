@@ -101,9 +101,9 @@ const features: Feature[] = [
     accent: "border-grape",
     preview: (
       <div className="flex items-center justify-center gap-2 py-4 font-mono text-sm">
-        <span className="rounded-xl bg-t-str/15 px-3 py-2 text-t-str">"Sam"</span>→
+        <span className="rounded-xl bg-t-str/15 px-3 py-2 text-t-str-text">"Sam"</span>→
         <span className="rounded-xl border-2 border-primary px-3 py-2 font-bold">greet()</span>→
-        <span className="rounded-xl bg-t-str/15 px-3 py-2 text-t-str">"Hi, Sam"</span>
+        <span className="rounded-xl bg-t-str/15 px-3 py-2 text-t-str-text">"Hi, Sam"</span>
       </div>
     ),
   },
@@ -114,10 +114,10 @@ const features: Feature[] = [
     preview: (
       <div className="flex flex-col items-center gap-2 font-mono text-sm">
         <span className="rounded-xl border-2 border-teal bg-teal/10 px-3 py-1.5">
-          7 * 6 == 42 <span className="font-bold text-teal">→ True</span>
+          7 * 6 == 42 <span className="font-bold text-teal-ink">→ True</span>
         </span>
         <span className="rounded-xl border-2 border-coral bg-coral/10 px-3 py-1.5">
-          3 &gt; 10 <span className="font-bold text-coral">→ False</span>
+          3 &gt; 10 <span className="font-bold text-coral-ink">→ False</span>
         </span>
       </div>
     ),
@@ -160,7 +160,7 @@ function Index() {
           {[
             { n: "1", t: "Read", d: "Start from a short, real Python program.", c: "bg-grape" },
             { n: "2", t: "Step", d: "Play, pause, or step through it line by line.", c: "bg-sky" },
-            { n: "3", t: "Understand", d: "See exactly what changed and why.", c: "bg-teal" },
+            { n: "3", t: "Understand", d: "See exactly what changed and why.", c: "bg-teal !text-code-bg" },
           ].map((x) => (
             <div key={x.n} className="rounded-3xl border-2 bg-card p-8 shadow-soft transition-transform hover:-translate-y-1">
               <span className={`grid h-14 w-14 place-items-center rounded-2xl font-display text-2xl font-extrabold text-primary-foreground ${x.c}`}>{x.n}</span>
@@ -187,7 +187,7 @@ function Index() {
       </section>
 
       <section className="mx-auto max-w-5xl px-5 py-24 text-center">
-        <div className="rounded-[2.5rem] bg-brand p-12 shadow-soft">
+        <div className="rounded-[2.5rem] bg-brand-deep p-12 shadow-soft">
           <h2 className="text-4xl font-extrabold text-primary-foreground md:text-5xl">Ready to see your code think?</h2>
           <Link to="/playground" className="mt-8 inline-flex items-center gap-2 rounded-full bg-card px-7 py-3.5 font-bold text-foreground transition-transform hover:scale-105">
             Open the playground <ArrowRight className="h-4 w-4" />

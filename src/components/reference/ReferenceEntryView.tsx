@@ -38,7 +38,7 @@ export function ReferenceEntryView({ entry }: { entry: ReferenceEntry }) {
           <h1 id="reference-title" className={`text-3xl font-extrabold md:text-4xl ${entry.scope === "concept" ? "" : "font-mono"}`}>
             {entry.title}
           </h1>
-          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-grape-ink">
             {entry.category === "method" && parent ? `${parent.title} method` : categoryLabel(entry)}
           </span>
         </div>
