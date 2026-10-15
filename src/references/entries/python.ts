@@ -219,6 +219,66 @@ items.append("a", "b")`,
     related: ["python.types.list", "concept.method", "concept.mutability", "python.types.None"],
   },
   {
+    id: "python.types.float",
+    scope: "python",
+    category: "data-type",
+    title: "float",
+    summary: "Numbers with a decimal point, like 9.99, 0.5 or -2.0. Short for floating-point number.",
+    aliases: ["floats", "decimal", "decimal number", "floating point"],
+    explanation: [
+      "A **float** is a number with a decimal point: `9.99`, `0.5`, `-2.0`. You write it without quotes. `2.0` is a float even though it's a whole amount; `2` is an int.",
+      "Floats are stored in binary, so some decimal amounts can't be stored exactly and tiny rounding differences can appear, as in `0.1 + 0.2`.",
+    ],
+    examples: [
+      {
+        code: `price = 9.99
+print(price * 2)
+print(7 / 2)
+print(0.1 + 0.2)`,
+        output: ["19.98", "3.5", "0.30000000000000004"],
+        caption: "Dividing with `/` always gives a float. The last line shows a rounding difference.",
+      },
+    ],
+    related: ["python.types.int", "python.builtins.float", "python.builtins.type"],
+  },
+  {
+    id: "python.types.bool",
+    scope: "python",
+    category: "data-type",
+    title: "bool",
+    summary: "One of two values, True or False. Short for Boolean.",
+    aliases: ["boolean", "booleans", "True", "False"],
+    keywords: ["yes or no", "true false"],
+    explanation: [
+      "A **bool** is either `True` or `False`, for anything that's yes-or-no: is the player ready, is the box ticked. Write them with a capital letter and no quotes.",
+      "Comparisons like `age >= 13` give a bool. You'll use them to make decisions with `if`.",
+    ],
+    examples: [
+      {
+        code: `is_ready = True
+print(is_ready)
+print(type(is_ready))
+print(18 > 20)`,
+        output: ["True", "<class 'bool'>", "False"],
+      },
+    ],
+    mistakes: [
+      {
+        title: "Writing true in lowercase",
+        explanation: "Python's values are `True` and `False`. Lowercase `true` is just a name that doesn't exist.",
+        code: `print(true)`,
+        error: "NameError: name 'true' is not defined. Did you mean: 'True'?",
+      },
+      {
+        title: "Putting quotes around True",
+        explanation: '`"True"` is a string that happens to spell True, not a bool.',
+        code: `print(type("True"))`,
+        output: ["<class 'str'>"],
+      },
+    ],
+    related: ["python.types.int", "python.types.str", "python.keywords.if"],
+  },
+  {
     id: "python.types.None",
     scope: "python",
     category: "data-type",
@@ -388,6 +448,105 @@ len(word)`,
       },
     ],
     related: ["concept.return-value", "python.types.str", "python.types.list", "python.builtins.print"],
+  },
+  {
+    id: "python.builtins.int",
+    scope: "python",
+    category: "built-in",
+    title: "int()",
+    summary: "Makes an int from a value, such as the text \"18\" or the float 9.99. Fails with a ValueError if the text isn't a whole number.",
+    aliases: ["int", "convert to int", "to integer", "string to number"],
+    keywords: ["convert", "turn text into a number", "parse number"],
+    explanation: [
+      "`int()` gives back a **new** int made from the value you pass in. It's how you turn text like `\"18\"`, for example from `input()`, into a number you can do maths with.",
+      "Text must spell a whole number (spaces around it are fine). `\"18.5\"` and `\"eighteen\"` can't be converted and cause a [ValueError](ref:python.errors.ValueError). Given a float, `int()` drops the decimal part: `int(9.99)` is `9`.",
+    ],
+    syntax: "int(value)",
+    parameters: [{ name: "value", description: "A string that spells a whole number, or a number." }],
+    returns: "A new int.",
+    prints: "Nothing.",
+    changes: "Nothing. The original value is unchanged.",
+    examples: [
+      {
+        code: `age_text = "18"
+age = int(age_text)
+print(age + 2)`,
+        output: ["20"],
+        caption: '`int()` returns the number 18. `age_text` still refers to the string `"18"`.',
+        call: { name: "int", args: ['"18"'], returns: "18", assignTo: "age", phase: "assign" },
+      },
+    ],
+    mistakes: [
+      {
+        title: "Converting text that isn't a whole number",
+        explanation: "Check what the text actually says. For a decimal like `\"18.5\"`, use `float()` instead.",
+        code: `print(int("18.5"))`,
+        error: "ValueError: invalid literal for int() with base 10: '18.5'",
+      },
+    ],
+    related: ["python.builtins.float", "python.builtins.str", "python.builtins.input", "python.errors.ValueError"],
+  },
+  {
+    id: "python.builtins.float",
+    scope: "python",
+    category: "built-in",
+    title: "float()",
+    summary: "Makes a float from a value, such as the text \"9.99\" or the int 3.",
+    aliases: ["float", "convert to float", "to decimal"],
+    keywords: ["convert", "decimal from text"],
+    explanation: [
+      "`float()` gives back a new float made from the value you pass in. Use it for text that holds a decimal number, like a price.",
+      "Text that doesn't spell a number, like `\"nine\"`, causes a [ValueError](ref:python.errors.ValueError).",
+    ],
+    syntax: "float(value)",
+    parameters: [{ name: "value", description: "A string that spells a number, or a number." }],
+    returns: "A new float.",
+    prints: "Nothing.",
+    changes: "Nothing.",
+    examples: [
+      {
+        code: `price = float("9.99")
+print(price * 2)
+print(float(3))`,
+        output: ["19.98", "3.0"],
+      },
+    ],
+    mistakes: [
+      {
+        title: "Converting a word",
+        explanation: "`float()` only understands numbers written with digits.",
+        code: `print(float("nine"))`,
+        error: "ValueError: could not convert string to float: 'nine'",
+      },
+    ],
+    related: ["python.builtins.int", "python.types.float", "python.errors.ValueError"],
+  },
+  {
+    id: "python.builtins.str",
+    scope: "python",
+    category: "built-in",
+    title: "str()",
+    summary: "Makes a string from any value, such as the int 18 becoming the text \"18\".",
+    aliases: ["str", "convert to string", "to text"],
+    keywords: ["number to text", "join number and text"],
+    explanation: [
+      "`str()` gives back the text version of a value. It's useful when you want to join a number to other text with `+`, which only joins strings.",
+    ],
+    syntax: "str(value)",
+    parameters: [{ name: "value", description: "Any value." }],
+    returns: "A new string.",
+    prints: "Nothing.",
+    changes: "Nothing.",
+    examples: [
+      {
+        code: `age = 18
+print("Age: " + str(age))
+print(str(age) + str(age))`,
+        output: ["Age: 18", "1818"],
+        caption: '`str(age)` is the text `"18"`, so `+` joins it instead of adding.',
+      },
+    ],
+    related: ["python.types.str", "python.builtins.int", "python.errors.TypeError"],
   },
   {
     id: "python.builtins.type",
@@ -743,6 +902,41 @@ score = 10`,
       },
     ],
     related: ["python.errors.NameError", "python.builtins.print", "concept.programming-language"],
+  },
+  {
+    id: "python.errors.ValueError",
+    scope: "python",
+    category: "error",
+    title: "ValueError",
+    summary: "Python stopped because a function got a value of the right type but the wrong content, like int(\"eighteen\").",
+    aliases: ["value error", "invalid literal"],
+    keywords: ["invalid literal for int", "could not convert string to float", "base 10"],
+    explanation: [
+      "A **ValueError** means the type was fine but the value itself couldn't be used. `int()` accepts strings, but only strings that spell a whole number, so `int(\"eighteen\")` fails.",
+      "It often happens with `input()`: the user can type anything, and the program assumed digits. The last line of the message quotes the exact value that failed.",
+    ],
+    mistakes: [
+      {
+        title: "Converting text that isn't a number",
+        explanation: "`int()` can't read words.",
+        code: `print(int("eighteen"))`,
+        error: "ValueError: invalid literal for int() with base 10: 'eighteen'",
+      },
+      {
+        title: "A decimal given to int()",
+        explanation: "`int()` reads whole numbers only. Use `float()` for decimals.",
+        code: `print(int("18.5"))`,
+        error: "ValueError: invalid literal for int() with base 10: '18.5'",
+      },
+      {
+        title: "The user typed something unexpected",
+        explanation: "When the user types `eighteen`, `int()` can't convert it.",
+        code: `age = int(input("How old are you? "))`,
+        input: ["eighteen"],
+        error: "ValueError: invalid literal for int() with base 10: 'eighteen'",
+      },
+    ],
+    related: ["python.builtins.int", "python.builtins.float", "python.builtins.input", "python.errors.TypeError"],
   },
   {
     id: "python.errors.TypeError",
