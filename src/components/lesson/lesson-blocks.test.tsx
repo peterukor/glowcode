@@ -225,6 +225,20 @@ describe("Chapter 1 activities", () => {
   });
 });
 
+describe("Sample user input", () => {
+  it("labels a code example's sample input as a sample, not something the student typed", () => {
+    render(<CodeExample block={{ type: "code", language: "python", code: 'name = input("Name? ")\nprint(name)', input: ["Ada"], output: ["Name? Ada", "Ada"] }} onActivity={() => {}} />);
+    const group = screen.getByRole("group", { name: "Sample user input" });
+    expect(within(group).getByText("Ada")).toBeTruthy();
+    expect(group.textContent).toContain("You don't type anything");
+  });
+
+  it("shows a question's sample input with the code", () => {
+    render(<QuestionActivity block={{ ...question, code: 'n = input("N? ")\nprint(n + n)', input: ["5"] }} onAttempt={() => {}} />);
+    expect(within(screen.getByRole("group", { name: "Sample user input" })).getByText("5")).toBeTruthy();
+  });
+});
+
 describe("PracticeActivity", () => {
   it("never claims to check the student's code", () => {
     render(<PracticeActivity block={practice} onAttempt={() => {}} />);

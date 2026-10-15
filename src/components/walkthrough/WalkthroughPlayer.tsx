@@ -9,6 +9,7 @@ import { ExampleVisualization } from "@/visualizations/ExampleVisualization";
 import { visualizationLabels } from "@/visualizations/labels";
 import { TypeLegend, VariablesPanel } from "@/visualizations/VariableBox";
 import { readingNames } from "@/walkthrough/controller";
+import { SampleInput } from "@/components/lesson/SampleInput";
 import { CheckpointQuestion, CheckpointRecap } from "./WalkthroughCheckpoint";
 
 /**
@@ -94,6 +95,11 @@ export function WalkthroughPlayer({
         </div>
 
         <div className="min-w-0 self-start [grid-area:console]">
+          {walkthrough.input && (
+            <div className="mb-3">
+              <SampleInput lines={walkthrough.input} />
+            </div>
+          )}
           <div className="rounded-3xl border-2 bg-card shadow-soft">
             <button
               type="button"

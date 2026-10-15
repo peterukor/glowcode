@@ -110,6 +110,12 @@ export type CodeBlock = {
   highlightLines?: number[];
   /** Adds "Walk through code" for a step-by-step view of this snippet. */
   walkthrough?: Walkthrough;
+  /**
+   * Sample user input for a program that calls input(): the lines a user types, in order.
+   * Shown to the student, clearly labelled as a sample (never as something they typed), and
+   * fed to Python by check:python.
+   */
+  input?: string[];
 };
 
 /** A static concept illustration. Always introduce it in the text and give it a caption. */
@@ -135,6 +141,12 @@ export type QuestionBlock = {
   variant: "predict" | "debug";
   prompt: RichText;
   code?: string;
+  /**
+   * Sample user input for a program that calls input(): the lines a user types, in order.
+   * Shown to the student, clearly labelled as a sample (never as something they typed), and
+   * fed to Python by check:python.
+   */
+  input?: string[];
   /** What Python printed when the code ran, e.g. an error message for debug questions. */
   errorOutput?: string;
   /**
@@ -179,6 +191,8 @@ export type PracticeBlock = {
   hints?: RichText[];
   /** A sample solution the student can reveal after trying. */
   solution: string;
+  /** Sample user input the solution is checked with (and shown with it) when it calls input(). */
+  input?: string[];
   /** Why the sample works: the reasoning, not a restatement of the code. */
   solutionNote?: RichText;
   /** Other valid approaches worth knowing about. */

@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { CodeView } from "@/components/CodeView";
 import type { QuestionBlock } from "@/courses/types";
 import { RichTextView } from "./RichTextView";
+import { SampleInput } from "./SampleInput";
 
 type Status = "answering" | "wrong" | "correct" | "revealed";
 
@@ -68,6 +69,11 @@ export function QuestionActivity({ block, onAttempt }: { block: QuestionBlock; o
         </legend>
 
         {block.code && <CodeView code={block.code} label="Code for this question" className="mt-3 py-3" />}
+        {block.input && (
+          <div className="mt-2">
+            <SampleInput lines={block.input} />
+          </div>
+        )}
         {block.errorOutput && (
           <div className="mt-2 rounded-2xl border-2 border-coral/40 bg-coral/8 px-4 py-3" role="group" aria-label="What Python printed">
             <p className="text-xs font-bold uppercase tracking-wide text-coral-ink">What Python printed</p>

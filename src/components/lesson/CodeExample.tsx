@@ -6,6 +6,7 @@ import { walkthroughActivityId } from "@/courses/queries";
 import type { CodeBlock } from "@/courses/types";
 import { findCodeReferences } from "@/references/codeLinks";
 import { RichTextView } from "./RichTextView";
+import { SampleInput } from "./SampleInput";
 
 const LANGUAGE_LABEL = { python: "Python", java: "Java" } as const;
 
@@ -94,6 +95,7 @@ export function CodeExample({ block, onActivity }: { block: CodeBlock; onActivit
             label={`${language} code, ${lineCount} ${lineCount === 1 ? "line" : "lines"}`}
             className="rounded-none py-3"
           />
+          {block.input && <SampleInput lines={block.input} variant="code" />}
           {block.output && <PrintedOutput lines={block.output} />}
           {block.caption && (
             <figcaption className="border-t border-code-line/30 bg-card px-4 py-2.5 text-sm text-muted-foreground">

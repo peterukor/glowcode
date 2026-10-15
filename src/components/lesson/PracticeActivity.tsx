@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { CodeView } from "@/components/CodeView";
 import type { PracticeBlock } from "@/courses/types";
 import { RichTextView } from "./RichTextView";
+import { SampleInput } from "./SampleInput";
 
 /**
  * A practice task. Students solve it wherever they like (paper, their own editor, or in
@@ -119,6 +120,7 @@ export function PracticeActivity({ block, onAttempt }: { block: PracticeBlock; o
       {solution === "shown" && (
         <div className="animate-pop mt-4 space-y-3">
           <CodeView code={block.solution} label="Sample solution" className="py-3" />
+          {block.input && <SampleInput lines={block.input} />}
           {block.solutionNote && (
             <div className="rounded-2xl bg-card p-4">
               <p className="text-sm font-bold">Why this works</p>

@@ -74,8 +74,15 @@ def _echo_input(prompt=""):
     print(value)
     return value
 builtins.input = _echo_input
+import sys, traceback
 with open("main.py") as _f:
-    exec(compile(_f.read(), "main.py", "exec"), {"__name__": "__main__"})
+    _code = compile(_f.read(), "main.py", "exec")
+try:
+    exec(_code, {"__name__": "__main__"})
+except Exception as _e:
+    # Report the error the way running main.py directly would: without this runner's frame.
+    traceback.print_exception(type(_e), _e, _e.__traceback__.tb_next)
+    sys.exit(1)
 `;
 
 function run(code: string, dumpVars = false, input?: string[]): Run {
@@ -187,6 +194,7 @@ const replayed = new Set<Walkthrough>();
 function checkSteps(w: Walkthrough, where: string) {
   if (replayed.has(w)) return;
   replayed.add(w);
+  if (/\binput\s*\(/.test(w.code) && !w.input?.length) problems.push(`${where}: walkthrough "${w.id}" calls input() but has no sample input`);
   if (!replayable(w)) return; // input(), classes and imports are checked by their final state only
   checked++;
   const traced = python(TRACER, { "main.py": w.code });
@@ -211,7 +219,7 @@ function checkWalkthrough(w: Walkthrough, where: string) {
   checkSteps(w, where);
   checked++;
   const last = w.steps.at(-1)!;
-  const r = run(w.code, true);
+  const r = run(w.code, true, w.input);
   if (!r.ok) {
     problems.push(`${where}: walkthrough "${w.id}" fails in Python:\n${r.stderr}`);
     return;
@@ -233,16 +241,19 @@ const codeSpan = (text: string) => /^`([^`]+)`$/.exec(text.trim())?.[1];
 function checkBlock(block: Block, where: string) {
   if (block.type === "code" && block.language === "python") {
     if (block.walkthrough) checkWalkthrough(block.walkthrough, where);
+    if (block.walkthrough && JSON.stringify(block.walkthrough.input) !== JSON.stringify(block.input)) {
+      problems.push(`${where}: code block and its walkthrough "${block.walkthrough.id}" use different sample input`);
+    }
     if (block.output) {
       checked++;
-      const r = run(block.code);
+      const r = run(block.code, false, block.input);
       if (!r.ok) problems.push(`${where}: code example fails in Python:\n${r.stderr}`);
       else if (show(r.stdout) !== show(block.output)) problems.push(`${where}: code prints ${show(r.stdout)}, but the lesson shows ${show(block.output)}`);
     }
   }
   if (block.type === "question" && block.code) {
     checked++;
-    const r = run(block.code);
+    const r = run(block.code, false, block.input);
     if (block.errorOutput) {
       // Same error, same place; only the file's location on disk may differ.
       if (r.ok) problems.push(`${where}: question "${block.id}" shows an error, but the code runs fine`);
@@ -259,7 +270,7 @@ function checkBlock(block: Block, where: string) {
   }
   if (block.type === "practice") {
     checked++;
-    const r = run(block.solution);
+    const r = run(block.solution, false, block.input);
     if (!r.ok) problems.push(`${where}: practice "${block.id}" sample solution fails in Python:\n${r.stderr}`);
   }
 }

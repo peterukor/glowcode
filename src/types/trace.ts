@@ -258,6 +258,12 @@ export type Walkthrough = {
   whileLoop?: WhileLoopShape;
   /** Structure of the `for` loop in `code`, for the loop flowchart. */
   forLoop?: ForLoopShape;
+  /**
+   * Sample user input for code that calls input(), one entry per call. The player shows it
+   * labelled "Sample user input"; a walkthrough never pretends the student typed it.
+   * check:python feeds it to the real run.
+   */
+  input?: string[];
 };
 
 /** A playground demo: a walkthrough plus a chip icon. */
