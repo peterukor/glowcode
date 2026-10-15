@@ -22,7 +22,7 @@ export const Route = createFileRoute("/dev/visualizations")({
 /** The behaviors the engine has to get right, and a walkthrough that shows each. */
 const FEATURED: { label: string; id: string }[] = [
   { label: "Reassignment: read, calculate, rebind", id: "reassign" },
-  { label: "Reassignment in a lesson", id: "py-birthday" },
+  { label: "Reassignment in a lesson", id: "py-score-reassign" },
   { label: "Shared list vs copy", id: "py-shared-list" },
   { label: "Precedence tree", id: "py-precedence" },
   { label: "List changes, pop, slice", id: "py-list-changes" },

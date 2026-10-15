@@ -44,7 +44,7 @@ describe("registry content", () => {
   it("starts Python with Chapter 1's lessons, in order", () => {
     const ids = publishedLessons(getCourse("python-fundamentals")!).map((e) => e.lesson.id);
     expect(ids.slice(0, 2)).toEqual(["what-is-programming", "how-computers-follow-instructions"]);
-    expect(ids.at(-1)).toBe("why-variables-exist");
+    expect(ids.at(-1)).toBe("chapter-2-review");
   });
 });
 

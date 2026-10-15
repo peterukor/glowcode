@@ -1,385 +1,210 @@
 import type { Lesson } from "@/courses/types";
-import type { PyValue } from "@/types/python";
 import type { Walkthrough } from "@/types/trace";
+import { buildSteps, py } from "@/walkthrough/build";
 
-const int = (value: number): PyValue => ({ type: "int", value });
-const str = (value: string): PyValue => ({ type: "str", value });
-
-const assignWalkthrough: Walkthrough = {
-  id: "py-age-assignment",
-  title: "Creating a variable",
+const welcomeName: Walkthrough = {
+  id: "py-welcome-name",
+  title: "One name, used three times",
   language: "python",
   visualizations: ["variables"],
-  code: `age = 13
-print(age)`,
-  steps: [
+  code: `name = "Ada"
+
+print("Welcome,", name)
+print(name, "your score is ready.")
+print("Good luck,", name)`,
+  steps: buildSteps([
     {
       line: 1,
-      vars: { age: int(13) },
-      highlight: "age",
-      note: "Right side first: the value is 13. Then Python makes the name age refer to it.",
+      set: { name: py.str("Ada") },
+      highlight: "name",
+      note: "Python makes the string \"Ada\", then makes the name name refer to it. Nothing is printed yet.",
     },
-    {
-      line: 2,
-      vars: { age: int(13) },
-      output: ["13"],
-      note: "age has no quotes, so it's a name. Python looks up the value age refers to, and print() shows it: 13.",
-    },
-  ],
-};
-
-const birthdayWalkthrough: Walkthrough = {
-  id: "py-birthday",
-  title: "Changing a variable",
-  language: "python",
-  visualizations: ["variables"],
-  code: `age = 13
-print(age)
-age = age + 1
-print(age)`,
-  steps: [
-    { line: 1, vars: { age: int(13) }, highlight: "age", note: "age now refers to 13." },
-    { line: 2, vars: { age: int(13) }, output: ["13"], note: "Print the value age refers to right now: 13." },
     {
       line: 3,
-      vars: { age: int(13) },
-      calc: { target: "age", parts: [{ code: "age", value: "13" }, { code: "+" }, { code: "1" }], result: "14", phase: "calculate" },
-      output: ["13"],
-      note: "Line 3, right side first. Python looks up age (still 13) and adds 1. The result is a new value, 14. age hasn't changed yet.",
+      print: ["Welcome, Ada"],
+      note: "name has no quotes, so Python looks up what it refers to: \"Ada\". print() shows its two values with a space between them.",
+    },
+    {
+      line: 4,
+      print: ["Ada your score is ready."],
+      note: "Python looks up name again and gets the same value. print() shows \"Ada\", a space, then the text.",
       checkpoint: {
-        prompt: "Line 3 is `age = age + 1`. What does Python do **first**?",
+        prompt: "Line 3 printed `Welcome, Ada`. What will line 4, `print(name, \"your score is ready.\")`, add to the output?",
         choices: [
-          { id: "calculate", text: "Works out `age + 1`, using the value `age` refers to now" },
+          { id: "value", text: "`Ada your score is ready.`" },
           {
-            id: "store",
-            text: "Makes `age` refer to 14 straight away",
-            feedback: "That's where line 3 ends up, but Python can't store a value it hasn't worked out yet. What has to happen first?",
+            id: "word",
+            text: "`name your score is ready.`",
+            feedback: "`name` has no quotes around it here. Does Python print it as a word, or look up the value it refers to?",
           },
           {
-            id: "compare",
-            text: "Checks whether `age` is equal to `age + 1`",
-            feedback: "In Python, `=` isn't a question about equality. It's an instruction: work out the right side, then store the result.",
+            id: "comma",
+            text: "`Ada, your score is ready.`",
+            feedback: "The comma in the code separates the two values given to `print()`. Look at line 3's output: did its comma appear on screen?",
           },
         ],
-        answer: "calculate",
-        explanation:
-          "Right side first. Python looks up `age` (13) and works out 13 + 1. Only after that does `age` refer to the result, 14. Watch for that in the next step.",
+        answer: "value",
+        explanation: "Without quotes, `name` is looked up: `\"Ada\"`. The comma only separates the two values in the code; `print()` puts a space between them.",
       },
     },
-    {
-      line: 3,
-      vars: { age: int(14) },
-      highlight: "age",
-      calc: { target: "age", parts: [{ code: "age", value: "13" }, { code: "+" }, { code: "1" }], result: "14", phase: "assign" },
-      output: ["13"],
-      note: "Now the assignment: the name age moves to the new value, 14. Same line, second step.",
-    },
-    { line: 4, vars: { age: int(14) }, output: ["13", "14"], note: "Print again. Same name, new value: 14." },
-  ],
+    { line: 5, print: ["Good luck, Ada"], note: "A third use of the same name. If line 1 said \"Grace\", all three lines would say Grace." },
+  ]),
 };
 
+/**
+ * Chapter 2, lesson 1 (Phase 3's "Why Do Variables Exist?", rewritten in Phase 7; id kept).
+ * Its other activities moved to the lessons that now teach them: debug-name-case and
+ * reflect-use-before-create to "Using Variables", predict-score, reflect-earlier-print and
+ * practice-player-level to "Reassignment".
+ */
 export const whyVariablesExist: Lesson = {
   id: "why-variables-exist",
-  title: "Why Do Variables Exist?",
-  description: "How a program remembers information, and what Python does when you write name = value.",
+  title: "Why Do We Need Variables?",
+  description: "Give a value a name once, then use the name wherever the value is needed.",
   status: "published",
   objectives: [
-    "Explain why programs need a way to remember values.",
-    "Describe the two steps Python takes for an assignment like `age = 13`.",
-    "Predict what a variable refers to after it's been reassigned.",
-    "Spot and fix the most common variable mistakes.",
+    "Explain the problem that repeating the same value causes.",
+    "Describe a variable as a name that refers to a value.",
+    "Read a program that uses a variable and say what each line prints.",
+    "Change a program's behaviour by changing one assignment.",
   ],
-  references: [
-    "concept.variable",
-    "python.operators.assignment",
-    "python.operators.addition",
-    "python.types.int",
-    "python.types.str",
-    "python.errors.NameError",
-  ],
+  references: ["concept.variable", "python.operators.assignment", "python.builtins.print", "python.types.str"],
   sections: [
     {
       id: "why",
-      title: "A program that needs to remember",
+      title: "The same name, three times",
       blocks: [
         {
           type: "text",
-          text: "You're building the sign-up page for a games website. A new player types in their age: 13.",
+          text: "Here's a short program that greets a player called Ada:",
+        },
+        {
+          type: "code",
+          language: "python",
+          code: `print("Welcome, Ada!")
+print("Ada, your score is ready.")
+print("Good luck, Ada!")`,
+          output: ["Welcome, Ada!", "Ada, your score is ready.", "Good luck, Ada!"],
         },
         {
           type: "text",
-          text: "The site needs that number again and again. It decides which games the player can see, shows the age on their profile, and wishes them a happy birthday next year.",
+          text: "It works. Now a different player, Grace, signs in. You'd have to find and change `Ada` in three places, and if you miss one, Grace is told \"Good luck, Ada!\". A real game mentions the player's name dozens of times. Copying the same value everywhere makes every change slow and easy to get wrong.",
         },
         {
           type: "text",
-          text: "Python runs one instruction at a time, though. Once the instruction that read the age has finished, how does the program hold on to 13 for later? It needs a way to **remember** a value and find it again. That's what variables are for.",
+          text: "What the program needs is a way to write the player's name **once** and refer to it everywhere else.",
         },
       ],
     },
     {
-      id: "what-is-a-variable",
+      id: "give-it-a-name",
+      title: "Give the value a name",
+      blocks: [
+        {
+          type: "code",
+          language: "python",
+          code: welcomeName.code,
+          caption: "Walk through it: watch the name being created, then looked up on each line.",
+          walkthrough: welcomeName,
+        },
+        {
+          type: "list",
+          items: [
+            "**Line 1** creates a [variable](ref:concept.variable): the name `name` now refers to the string `\"Ada\"`. Nothing appears on the screen.",
+            "**Lines 3–5** use the name without quotes. Each time, Python looks up the value `name` refers to and uses that.",
+            "`print()` can be given several values separated by commas. It shows them in order, with a space between each one, so you don't type the space yourself.",
+          ],
+        },
+        {
+          type: "text",
+          text: "To greet Grace instead, you change line 1 to `name = \"Grace\"` and nothing else. The value lives in one place, so it can only be wrong in one place.",
+        },
+      ],
+    },
+    {
+      id: "names-and-values",
       title: "Names that refer to values",
       blocks: [
         {
           type: "text",
-          text: "A [variable](ref:concept.variable) is a name that refers to a value. You choose the name. Python remembers which value the name refers to, and whenever your code uses the name, Python uses that value.",
+          text: "A **variable** is a name that refers to a value. You choose the name; Python remembers which value it refers to. The value isn't stored *inside* the name. The name points to it, and Python follows that link whenever the name is used.",
         },
         {
           type: "figure",
-          caption: "Two variables. Each name points to the value it refers to. The type label shows what kind of value it is: a whole number (`int`) or text (`str`).",
-          figure: {
-            kind: "names",
-            bindings: [
-              { name: "age", value: int(13) },
-              { name: "player", value: str("Ada") },
-            ],
-          },
+          caption: "After line 1: the name `name` refers to the string `\"Ada\"`.",
+          figure: { kind: "names", bindings: [{ name: "name", value: py.str("Ada") }] },
         },
         {
           type: "callout",
           tone: "real-world",
           title: "Like a name tag",
-          text: "A variable works like a name tag stuck on a value. The tag lets you find the value later. You can move the tag to a different value, and the value it used to be on doesn't get a label any more.",
-        },
-      ],
-    },
-    {
-      id: "creating",
-      title: "Creating a variable",
-      blocks: [
-        {
-          type: "text",
-          text: "You create a variable with an **assignment**: a name, the `=` sign, and a value.",
-        },
-        {
-          type: "code",
-          language: "python",
-          code: assignWalkthrough.code,
-          output: ["13"],
-          highlightLines: [1],
-          caption: "Line 1 is the assignment. Line 2 uses the variable.",
-          walkthrough: assignWalkthrough,
-        },
-        {
-          type: "text",
-          text: "The `=` sign is the [assignment operator](ref:python.operators.assignment). Python always handles an assignment in two steps:",
-        },
-        {
-          type: "list",
-          ordered: true,
-          items: ["Work out the value on the **right** side.", "Make the name on the **left** refer to that value."],
-        },
-        {
-          type: "text",
-          text: "So read `age = 13` as \"set age to 13\". In maths, `=` says two things are equal. In Python, it's an instruction to do something.",
-        },
-      ],
-    },
-    {
-      id: "reading",
-      title: "Using a variable",
-      blocks: [
-        {
-          type: "text",
-          text: "Once a variable exists, you can use its name anywhere you'd use the value. Python looks up the value at the moment the line runs.",
-        },
-        {
-          type: "code",
-          language: "python",
-          code: `age = 13
-print(age + 1)
-print(age)`,
-          output: ["14", "13"],
-          highlightLines: [2],
-          caption: "Line 2 uses `age` to work out a new value. It doesn't change what `age` refers to.",
-        },
-        {
-          type: "callout",
-          tone: "careful",
-          title: "age or \"age\"?",
-          text: "`print(age)` prints `13`: without quotes, `age` is a name, so Python looks up its value. `print(\"age\")` prints the word `age`: with quotes, it's a string, and Python uses the text as it is.",
-        },
-      ],
-    },
-    {
-      id: "changing",
-      title: "Changing a variable",
-      blocks: [
-        {
-          type: "text",
-          text: "A year later the player has a birthday. The program doesn't need a second variable. It can make the same name refer to a new value.",
-        },
-        {
-          type: "code",
-          language: "python",
-          code: birthdayWalkthrough.code,
-          output: ["13", "14"],
-          highlightLines: [3],
-          caption: "Walk through this one. It stops before line 3 and asks you to predict what Python does.",
-          walkthrough: birthdayWalkthrough,
-        },
-        {
-          type: "text",
-          text: "In maths, `age = age + 1` is impossible. In Python it's normal, because of the two steps. First Python works out `age + 1` using the value `age` refers to **now**: 13 + 1 is 14. Then it makes `age` refer to 14.",
-        },
-        {
-          type: "figure",
-          caption: "After line 3, `age` refers to 14. Nothing refers to 13 any more, so Python can throw it away.",
-          figure: { kind: "names", bindings: [{ name: "age", value: int(14), previous: int(13) }] },
-        },
-        {
-          type: "reflect",
-          id: "reflect-earlier-print",
-          prompt: "Line 2 printed `13`. After line 3, `age` refers to 14. Why doesn't the `13` already on the screen change to `14`?",
-          answer:
-            "`print()` shows the value at the moment its line runs. When line 2 ran, `age` referred to 13, so 13 went on the screen, and that's finished. Line 3 changes what `age` refers to from then on. It doesn't go back and redo earlier lines. To see the new value, the program has to print again, which is what line 4 does.",
-        },
-        {
-          type: "callout",
-          tone: "other-languages",
-          title: "In Java",
-          text: "Java asks you to say what type a variable holds when you create it, like `int age = 13;`. After that, `age` can only refer to whole numbers. Python doesn't ask, though keeping one kind of value per name still makes code easier to follow.",
-        },
-      ],
-    },
-    {
-      id: "mistakes",
-      title: "Common mistakes",
-      blocks: [
-        {
-          type: "text",
-          text: "These four slips cause most early variable bugs. Each one makes Python stop with an error or print something you didn't expect.",
-        },
-        {
-          type: "list",
-          items: [
-            "**Using a name before creating it.** Python runs from the top, so the assignment has to come first.",
-            "**Changing a capital letter.** `age` and `Age` are different names. Python stops with a [NameError](ref:python.errors.NameError).",
-            "**Putting quotes around a name.** `print(\"age\")` prints the word, not the value.",
-            "**Writing it backwards.** `13 = age` is an error. The name always goes on the left.",
-          ],
+          text: "A variable works like a name tag stuck on a value. The tag lets you find the value later, and it can be moved to a different value. You'll see that happen in lesson 5.",
         },
         {
           type: "question",
-          id: "debug-name-case",
-          variant: "debug",
-          prompt: "This program stopped with an error. What's the problem?",
-          code: `age = 13
-print(Age)`,
-          errorOutput: `Traceback (most recent call last):
-  File "main.py", line 2, in <module>
-    print(Age)
-          ^^^
-NameError: name 'Age' is not defined. Did you mean: 'age'?`,
-          choices: [
-            { id: "case", text: "Names are case-sensitive: `Age` and `age` are different names" },
-            {
-              id: "quotes",
-              text: "`Age` needs quotes around it",
-              feedback:
-                "With quotes, Python would print the word Age instead of the number 13. The program wants the value. Read the last line of the error again.",
-            },
-            {
-              id: "numbers",
-              text: "`print()` can't show numbers",
-              feedback: "`print()` shows numbers fine. The error is about a name. Which name, and does it match the one on line 1?",
-            },
-          ],
-          answer: "case",
-          explanation:
-            "Line 1 created `age` (lowercase). Line 2 asked for `Age`, and nothing with that exact name exists, so Python stops with a NameError and suggests the name you probably meant. The fix is `print(age)`.",
-        },
-        {
-          type: "reflect",
-          id: "reflect-use-before-create",
-          prompt: "This program also stops with a NameError, on line 1. The variable is created right there on line 2. Why doesn't Python find it?",
-          code: `print(score)
-score = 10`,
-          answer:
-            "When Python runs line 1, it hasn't reached line 2 yet, so the name `score` doesn't exist. Python doesn't look ahead. A variable only exists from the moment its assignment runs, so assign first and use it after.",
-        },
-      ],
-    },
-    {
-      id: "check",
-      title: "Check your understanding",
-      blocks: [
-        {
-          type: "callout",
-          tone: "mindset",
-          title: "Predict first",
-          text: "Before you check an answer, say what each variable refers to after every line. When your prediction is wrong, you've found the exact idea worth looking at again.",
-        },
-        {
-          type: "question",
-          id: "predict-score",
+          id: "predict-change-name",
           variant: "predict",
-          prompt: "What does this program print?",
-          code: `score = 5
-best = score
-score = score + 1
-print(best)`,
+          prompt: "Only line 1 has changed. What is the **first** line this program prints?",
+          code: `name = "Grace"
+
+print("Welcome,", name)
+print(name, "your score is ready.")
+print("Good luck,", name)`,
           choices: [
-            { id: "5", text: "`5`" },
             {
-              id: "6",
-              text: "`6`",
-              feedback:
-                "Line 3 changes what `score` refers to. Does it change what `best` refers to? Work out what each name refers to after every line.",
+              id: "ada",
+              text: "`Welcome, Ada`",
+              feedback: "Line 3 doesn't contain `Ada` any more; it contains `name`. What does `name` refer to in this version?",
             },
+            { id: "grace", text: "`Welcome, Grace`" },
             {
-              id: "score",
-              text: "`score`",
-              feedback: "There are no quotes around `best` on line 4, so Python prints a value, not a word.",
-            },
-            {
-              id: "error",
-              text: "An error, because `best` and `score` are linked",
-              feedback: "Two names can refer to the same value without causing an error. What does each one refer to after line 3?",
+              id: "word",
+              text: "`Welcome, name`",
+              feedback: "`name` isn't in quotes on line 3, so Python treats it as a name and looks up its value.",
             },
           ],
-          answer: "5",
-          hint: "Line 2 makes `best` refer to the value `score` refers to at that moment.",
+          answer: "grace",
           explanation:
-            "Line 2 makes `best` refer to the value `score` refers to then: 5. Line 3 works out 5 + 1 and makes `score` refer to 6. Only `score` moved, so `best` still refers to 5.",
+            "Line 3 doesn't say who to welcome; it says \"whatever `name` refers to\". Line 1 now makes `name` refer to `\"Grace\"`, so every line that uses the name greets Grace.",
         },
       ],
     },
     {
       id: "practice",
-      title: "Practice",
+      title: "Your turn",
       blocks: [
         {
           type: "practice",
-          id: "practice-player-level",
-          context: "A game needs to remember a player's name and level, and the level goes up as they play.",
-          prompt: "Create a variable `player` that refers to a name and a variable `level` set to `1`. The player levels up, so increase `level` by 1. Then print both.",
+          id: "practice-city-postcard",
+          context: "A travel app prints three lines about the city you're visiting. The city should be written only once.",
+          prompt: "Create a variable `city` that refers to `\"Lagos\"`. Then print three lines that each use `city`: a welcome, a weather line and a goodbye.",
           checklist: [
-            "`player` refers to some text, in quotes.",
-            "`level` starts at `1` and is increased using its old value.",
-            "The program prints the name and then `2`.",
+            "`\"Lagos\"` appears once, on the assignment line.",
+            "Each `print()` uses `city` without quotes.",
+            "Changing the first line to another city changes all three printed lines.",
           ],
-          hints: [
-            "Text needs quotes. Numbers don't.",
-            "To level up, use the old value on the right side of an assignment.",
-            "The level-up line is `level = level + 1`.",
-          ],
-          solution: `player = "Ada"
-level = 1
-level = level + 1
-print(player)
-print(level)`,
+          hints: ["Start with `city = \"Lagos\"`.", "Give `print()` two values, like `print(\"Welcome to\", city)`."],
+          solution: `city = "Lagos"
+
+print("Welcome to", city)
+print("It's sunny in", city)
+print("Goodbye from", city)`,
           solutionNote:
-            "Line 3 works out `level + 1` while `level` still refers to 1, then moves `level` to 2. The prints come last, so they show the values after the level-up.",
-          alternatives: [
-            {
-              code: `player = "Ada"
-level = 1
-level = 2
-print(player)
-print(level)`,
-              note: "This prints the same thing, but it only works because you already know the level is 1. `level = level + 1` works for any starting level, which is what a real game needs.",
-            },
+            "Try changing line 1 to `\"Nairobi\"`: all three lines change, and you only edited one place. That's the job a variable does.",
+        },
+      ],
+    },
+    {
+      id: "key-ideas",
+      title: "Key ideas",
+      blocks: [
+        {
+          type: "list",
+          items: [
+            "Repeating the same value in many places makes changes slow and mistakes likely.",
+            "A **variable** is a name that refers to a value. `name = \"Ada\"` creates one.",
+            "Using the name without quotes makes Python look up its value at that moment.",
+            "`print()` can show several values separated by commas, with a space between each.",
           ],
         },
       ],

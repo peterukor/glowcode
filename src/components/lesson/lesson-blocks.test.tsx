@@ -192,12 +192,12 @@ const practice: PracticeBlock = {
   alternatives: [{ note: "You could write 2 directly." }],
 };
 
-describe("Chapter 1 activities", () => {
-  const chapterOne = getCourse("python-fundamentals")!.chapters[0]!;
-  const chapterQuestions = chapterOne.lessons.flatMap((l) => l.sections.flatMap((s) => s.blocks)).filter((b): b is QuestionBlock => b.type === "question");
+describe("Chapter 1 and 2 activities", () => {
+  const written = getCourse("python-fundamentals")!.chapters.slice(0, 2);
+  const chapterQuestions = written.flatMap((c) => c.lessons).flatMap((l) => l.sections.flatMap((s) => s.blocks)).filter((b): b is QuestionBlock => b.type === "question");
 
   it("never shows an answer before an attempt, and keeps it hidden after a wrong one", () => {
-    expect(chapterQuestions.length).toBeGreaterThanOrEqual(15);
+    expect(chapterQuestions.length).toBeGreaterThanOrEqual(35);
     for (const q of chapterQuestions) {
       const { unmount } = render(<QuestionActivity block={q} onAttempt={() => {}} />);
       expect(button("Check answer").disabled).toBe(true);

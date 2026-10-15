@@ -77,6 +77,9 @@ describe("playback controller", () => {
     expect(readingNames(calc!)).toEqual(["count"]);
     expect(readingNames(assign!)).toEqual([]);
   });
+    expect(readingNames(step({}))).toEqual(["score"]);
+    expect(readingNames(step({ add: "15" }))).toEqual([]);
+  });
 });
 
 describe("reassignment events", () => {
@@ -208,7 +211,7 @@ describe("every walkthrough in the app", () => {
     const catalog = walkthroughCatalog();
     expect(new Set(catalog.map((e) => e.walkthrough.id)).size).toBe(catalog.length);
     expect(catalog.find((e) => e.walkthrough.id === "len")!.usedIn).toEqual(["Playground", "Manual: len()"]);
-    expect(catalog.find((e) => e.walkthrough.id === "py-birthday")!.usedIn).toEqual(["Lesson: Why Do Variables Exist?"]);
+    expect(catalog.find((e) => e.walkthrough.id === "py-score-reassign")!.usedIn).toEqual(["Lesson: Changing Values with Reassignment"]);
   });
 });
 

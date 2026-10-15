@@ -51,7 +51,7 @@ describe("Python Fundamentals outline", () => {
     expect(planned.every(isPlanned)).toBe(true);
     expect(planned.every((c) => c.lessons.length === 0)).toBe(true);
     expect(isPlanned(course.chapters[0]!)).toBe(false);
-    expect(course.chapters[1]!.status).toBe("in-progress");
+    expect(course.chapters[1]!.status).toBe("complete"); // Chapter 2 was finished in Phase 7
   });
 
   it("shows planned chapters in the contents and counts what's available", () => {
@@ -87,12 +87,14 @@ describe("Chapter 1 structure", () => {
 
   it("numbers lessons within their chapter", () => {
     expect(lessonPosition(course, "first-python-program")).toEqual({ index: 3, count: 6 });
-    expect(lessonPosition(course, "why-variables-exist")).toEqual({ index: 1, count: 1 });
+    expect(lessonPosition(course, "why-variables-exist")).toEqual({ index: 1, count: 8 });
     expect(lessonPosition(course, "no-such-lesson")).toBeUndefined();
   });
 
-  it("opens the course with Chapter 1, followed by the existing variables lesson", () => {
-    expect(publishedLessons(course).map((e) => e.lesson.id)).toEqual([...lessons.map((l) => l.id), "why-variables-exist"]);
+  it("opens the course with Chapter 1, followed by Chapter 2", () => {
+    const ids = publishedLessons(course).map((e) => e.lesson.id);
+    expect(ids.slice(0, 6)).toEqual(lessons.map((l) => l.id));
+    expect(ids[6]).toBe("why-variables-exist");
   });
 
   it("uses lesson, activity and walkthrough ids that are unique across the whole app", () => {
