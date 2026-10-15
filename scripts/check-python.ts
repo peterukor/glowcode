@@ -236,6 +236,30 @@ function checkWalkthrough(w: Walkthrough, where: string) {
   }
 }
 
+/**
+ * Lines made only of ^ and ~ point at the failing part of a line. Which lines get them, and
+ * where, changes between Python versions (3.13 leaves them out where 3.12 draws them under
+ * `age = int(age_text)`), so a lesson written on one version must still pass on another. The
+ * rest of the traceback must match exactly; a marker line the lesson shows must match Python's
+ * whenever Python prints one under the same source line.
+ */
+const isMarker = (line: string) => /^\s*[\^~]+[\^~ ]*$/.test(line) && line.trim().length > 0;
+function sameTraceback(shown: string, actual: string): boolean {
+  const strip = (t: string) => t.split("\n").filter((l) => !isMarker(l));
+  if (strip(shown).join("\n") !== strip(actual).join("\n")) return false;
+  const markersAfter = (t: string) => {
+    const lines = t.split("\n");
+    const out = new Map<string, string>();
+    lines.forEach((l, i) => {
+      if (isMarker(l) && i > 0) out.set(`${i}:${lines[i - 1]}`.replace(/^\d+:/, ""), l);
+    });
+    return out;
+  };
+  const a = markersAfter(actual);
+  for (const [source, marker] of markersAfter(shown)) if (a.has(source) && a.get(source) !== marker) return false;
+  return true;
+}
+
 const codeSpan = (text: string) => /^`([^`]+)`$/.exec(text.trim())?.[1];
 
 function checkBlock(block: Block, where: string) {
@@ -257,7 +281,7 @@ function checkBlock(block: Block, where: string) {
     if (block.errorOutput) {
       // Same error, same place; only the file's location on disk may differ.
       if (r.ok) problems.push(`${where}: question "${block.id}" shows an error, but the code runs fine`);
-      else if (r.stderr !== block.errorOutput) {
+      else if (!sameTraceback(block.errorOutput, r.stderr)) {
         problems.push(`${where}: question "${block.id}" shows this error:\n${block.errorOutput}\nPython prints:\n${r.stderr}`);
       }
     } else if (block.variant === "predict") {
