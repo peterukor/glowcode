@@ -389,7 +389,10 @@ steps, predictions without a right answer).
 fails if a code block's `output`, a walkthrough's steps (replayed event by event, including
 inside functions), final output or variables, a debug
 question's `errorOutput`, or a predict question's answer doesn't match what Python actually
-does. Neither check can tell whether your explanations are right; that part is your job.
+does. Lines made only of `^` and `~` markers vary between Python versions, so they're
+compared only where Python prints one under the same source line; every other line of an
+`errorOutput` must match exactly. Neither check can tell whether your explanations are right;
+that part is your job.
 
 ## Activity formats that don't exist yet
 
